@@ -28,6 +28,7 @@ Successfully finalized the end-to-end course generation and consumption flow.
 
 - **Course Length:** Currently hard-coded to 1 lesson for stability. Need "lazy" generation for longer courses.
 - **Video Fallbacks:** If YouTube returns no results, the player currently shows an empty space; needs a graceful empty state.
+- **Security Debt:** `LessonContent.jsx` uses `dangerouslySetInnerHTML`. Need to migrate to `react-markdown` or add DOMPurification to comply with `security.md`.
 
 ## Next Action
 
