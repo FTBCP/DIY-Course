@@ -17,3 +17,52 @@
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-serif: 'Fraunces', Georgia, serif;
 }
+
+/* ── Lesson body: rendered markdown prose ─────────────────────────── */
+.lesson-body h2 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: #1A1614;
+  margin: 2rem 0 0.75rem;
+  line-height: 1.25;
+}
+.lesson-body h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #1A1614;
+  margin: 1.5rem 0 0.5rem;
+}
+.lesson-body p {
+  margin: 0 0 1.25rem;
+}
+.lesson-body ul, .lesson-body ol {
+  margin: 0 0 1.25rem 1.5rem;
+  padding: 0;
+}
+.lesson-body li {
+  margin-bottom: 0.4rem;
+}
+.lesson-body strong {
+  font-weight: 600;
+  color: #1A1614;
+}
+.lesson-body em {
+  font-style: italic;
+}
+.lesson-body code {
+  font-family: monospace;
+  background: #FAF6EC;
+  border: 1px solid #E0D5C0;
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+}
+.lesson-body blockquote {
+  border-left: 3px solid #C4553F;
+  margin: 1.5rem 0;
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  color: #5C4A3A;
+  font-style: italic;
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Clock, Target, ArrowRight, Check, ChevronLeft, ChevronRight, PlayCircle, ExternalLink, Menu, Circle, CheckCircle2, Sparkles } from "lucide-react";
+import { BookOpen, Clock, ArrowRight, Check, ChevronLeft, ChevronRight, PlayCircle, ExternalLink, Circle, CheckCircle2 } from "lucide-react";
+
 
 export default function DIYCoursesMockups() {
   const [screen, setScreen] = useState("intake");
@@ -719,7 +720,7 @@ function LoadingScreen() {
       setStepIdx((i) => (i + 1) % steps.length);
     }, 2400);
     return () => clearInterval(t);
-  }, []);
+  }, [steps.length]);
 
   return (
     <div className="loading-wrap">
