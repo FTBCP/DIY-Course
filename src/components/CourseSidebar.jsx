@@ -1,6 +1,13 @@
 import { CheckCircle2, Circle } from "lucide-react";
 
-export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx }) {
+const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
+
+// Anthropic claude-sonnet pricing: $3/MTok input, $15/MTok output
+function estimateCost(inputTokens, outputTokens) {
+  return (inputTokens * 3 + outputTokens * 15) / 1_000_000;
+}
+
+export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx, inputTokens = 0, outputTokens = 0 }) {
   // calculate completion percentage
   const percentComplete = total > 0 ? Math.round((progress / total) * 100) : 0;
 
@@ -60,6 +67,19 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
           })}
         </div>
       ))}
+      {SHOW_COST && (inputTokens > 0 || outputTokens > 0) && (
+        <div className="px-7 pt-5 mt-4 border-t border-[#2A2420]">
+          <div className="text-[10px] tracking-[0.2em] uppercase text-[#5C4A3A] font-semibold mb-1.5">
+            Est. API Cost
+          </div>
+          <div className="font-mono text-[#C4553F] text-[15px] font-medium">
+            ${estimateCost(inputTokens, outputTokens).toFixed(4)}
+          </div>
+          <div className="text-[10px] text-[#5C4A3A] mt-0.5">
+            {(inputTokens + outputTokens).toLocaleString()} tokens
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

@@ -86,10 +86,16 @@ serve(async (req) => {
       throw new Error("Failed to generate course outline format.");
     }
 
-    // Update course title
-    await supabaseClient
+    // Update course title + seed token count from outline generation
+    // Uses adminClient — no UPDATE RLS policy exists for courses via user JWT
+    const outlineUsage = outlineResponse.usage;
+    await adminClient
       .from('courses')
-      .update({ title: outlineData.title })
+      .update({
+        title: outlineData.title,
+        input_tokens: outlineUsage.input_tokens,
+        output_tokens: outlineUsage.output_tokens,
+      })
       .eq('id', courseId);
 
     // Insert lesson stubs — body/citations/video_url are null until generated on-demand
@@ -113,7 +119,7 @@ serve(async (req) => {
     }
 
     // Mark course ready — lessons will fill in as the user reads them
-    await supabaseClient
+    await adminClient
       .from('courses')
       .update({ status: 'ready' })
       .eq('id', courseId);

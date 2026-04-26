@@ -125,17 +125,35 @@ serve(async (req) => {
       console.error("YouTube search failed or timed out.");
     }
 
-    // Persist to DB
+    // Persist lesson content
     await adminClient
       .from('lessons')
       .update({ body: lessonJson.body, citations: lessonJson.citations || [], video_url: videoUrl })
       .eq('id', lesson_id);
+
+    // Add this lesson's token usage to the course running total
+    const lessonUsage = lessonResponse.usage;
+    const { data: courseTokens } = await adminClient
+      .from('courses')
+      .select('input_tokens, output_tokens')
+      .eq('id', lesson.courses.id)
+      .single();
+
+    const newInputTokens = (courseTokens?.input_tokens || 0) + lessonUsage.input_tokens;
+    const newOutputTokens = (courseTokens?.output_tokens || 0) + lessonUsage.output_tokens;
+
+    await adminClient
+      .from('courses')
+      .update({ input_tokens: newInputTokens, output_tokens: newOutputTokens })
+      .eq('id', lesson.courses.id);
 
     return new Response(JSON.stringify({
       success: true,
       body: lessonJson.body,
       citations: lessonJson.citations || [],
       video_url: videoUrl,
+      course_input_tokens: newInputTokens,
+      course_output_tokens: newOutputTokens,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 
   } catch (error) {

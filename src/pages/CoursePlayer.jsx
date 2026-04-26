@@ -112,6 +112,9 @@ export default function CoursePlayer() {
               ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url }
               : l
           ));
+          if (data.course_input_tokens !== undefined) {
+            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
+          }
         }
         setIsGeneratingLesson(false);
       });
@@ -204,6 +207,8 @@ export default function CoursePlayer() {
           lessons={sidebarModules}
           activeLessonIdx={activeLessonIdx}
           setActiveLessonIdx={setActiveLessonIdx}
+          inputTokens={course.input_tokens || 0}
+          outputTokens={course.output_tokens || 0}
         />
       </div>
 

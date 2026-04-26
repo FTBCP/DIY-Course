@@ -22,6 +22,8 @@ Four logical entities. Supabase manages `users` through its built-in auth system
 | topic | text | The raw topic from intake, required |
 | intake_answers | jsonb | `{depth, time}` from intake form |
 | status | text | `generating`, `complete`, or `failed` |
+| input_tokens | integer | Cumulative Claude input tokens used, default 0 |
+| output_tokens | integer | Cumulative Claude output tokens used, default 0 |
 | created_at | timestamptz | Auto-set |
 
 ### lessons
