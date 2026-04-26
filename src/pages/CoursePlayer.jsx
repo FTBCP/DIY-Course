@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import CourseSidebar from "../components/CourseSidebar";
 import LessonContent from "../components/LessonContent";
 import { Link, useParams } from "react-router-dom";
@@ -13,6 +13,12 @@ export default function CoursePlayer() {
   const [completedLessonIds, setCompletedLessonIds] = useState(new Set());
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
+  const [lessonError, setLessonError] = useState(null);
+
+  // Tracks which lesson IDs have already been sent to generate-lesson so we
+  // never fire duplicate requests if the user navigates away and back quickly.
+  const generatingRef = useRef(new Set());
 
   // ── Load course, lessons, and existing progress ───────────────────
   useEffect(() => {
@@ -59,13 +65,11 @@ export default function CoursePlayer() {
           .in('lesson_id', lessonIds);
 
         if (progressData && progressData.length > 0) {
-          // Build the set of completed lesson IDs
           const completed = new Set(
             progressData.filter(p => p.completed_at).map(p => p.lesson_id)
           );
           setCompletedLessonIds(completed);
 
-          // Resume at the most recently viewed lesson
           const sorted = [...progressData].sort(
             (a, b) => new Date(b.last_viewed_at) - new Date(a.last_viewed_at)
           );
@@ -73,7 +77,6 @@ export default function CoursePlayer() {
           const lastIdx = loadedLessons.findIndex(l => l.id === lastViewedId);
 
           if (lastIdx !== -1) {
-            // If the last-viewed lesson is complete and there's a next one, advance
             const advance = completed.has(lastViewedId) && lastIdx < loadedLessons.length - 1;
             setActiveLessonIdx(advance ? lastIdx + 1 : lastIdx);
           }
@@ -85,6 +88,34 @@ export default function CoursePlayer() {
 
     loadCourse();
   }, [id]);
+
+  // ── Auto-generate lesson content when the active lesson has no body ──
+  useEffect(() => {
+    const activeLesson = lessons[activeLessonIdx];
+    if (!activeLesson || activeLesson.body !== null) return;
+    if (generatingRef.current.has(activeLesson.id)) return;
+
+    const lessonId = activeLesson.id;
+    generatingRef.current.add(lessonId);
+    setIsGeneratingLesson(true);
+    setLessonError(null);
+
+    supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
+      .then(({ data, error }) => {
+        if (error || !data?.success) {
+          console.error('Lesson generation failed:', error || data?.error);
+          setLessonError(data?.error || error?.message || "Failed to generate lesson. Please try again.");
+          generatingRef.current.delete(lessonId);
+        } else {
+          setLessons(prev => prev.map(l =>
+            l.id === lessonId
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url }
+              : l
+          ));
+        }
+        setIsGeneratingLesson(false);
+      });
+  }, [activeLessonIdx, lessons]);
 
   // ── Write last_viewed_at whenever the active lesson changes ───────
   useEffect(() => {
@@ -116,7 +147,6 @@ export default function CoursePlayer() {
 
     if (!error) {
       setCompletedLessonIds(prev => new Set([...prev, lesson.id]));
-      // Advance to next lesson if available
       if (activeLessonIdx < lessons.length - 1) {
         setActiveLessonIdx(activeLessonIdx + 1);
       }
@@ -127,7 +157,6 @@ export default function CoursePlayer() {
   const goPrev = () => { if (activeLessonIdx > 0) setActiveLessonIdx(activeLessonIdx - 1); };
   const goNext = () => { if (activeLessonIdx < lessons.length - 1) setActiveLessonIdx(activeLessonIdx + 1); };
 
-  // ── Build sidebar data (flat — all lessons in one group for now) ──
   const sidebarModules = [{
     mod: "Course Lessons",
     items: lessons.map((l, idx) => ({
@@ -177,20 +206,59 @@ export default function CoursePlayer() {
           setActiveLessonIdx={setActiveLessonIdx}
         />
       </div>
+
       <div className="overflow-y-auto">
         {activeLesson ? (
-          <LessonContent
-            moduleName="Course Lessons"
-            lessonNum={activeLessonIdx + 1}
-            lessonTitle={activeLesson.title}
-            body={activeLesson.body}
-            videoUrl={activeLesson.video_url}
-            citations={activeLesson.citations}
-            isComplete={completedLessonIds.has(activeLesson.id)}
-            onMarkComplete={handleMarkComplete}
-            goPrev={activeLessonIdx > 0 ? goPrev : null}
-            goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
-          />
+          isGeneratingLesson ? (
+            <div className="flex flex-col items-center justify-center min-h-screen py-16 px-8">
+              <div className="w-8 h-8 rounded-full border-2 border-[#E0D5C0] border-t-[#C4553F] animate-spin mb-6" />
+              <p className="font-serif text-[22px] text-[#1A1614] mb-2">
+                Writing your lesson…
+              </p>
+              <p className="text-[14px] text-[#8B6F4E] font-sans">
+                Researching sources. Usually takes 15–20 seconds.
+              </p>
+              {lessonError && (
+                <p className="mt-6 text-[14px] text-[#C4553F] text-center max-w-[400px]">
+                  {lessonError}
+                </p>
+              )}
+            </div>
+          ) : lessonError ? (
+            <div className="flex flex-col items-center justify-center min-h-screen py-16 px-8">
+              <p className="font-serif text-[22px] text-[#C4553F] mb-4">
+                Couldn't generate this lesson
+              </p>
+              <p className="text-[14px] text-[#5C4A3A] font-sans max-w-[400px] text-center mb-6">
+                {lessonError}
+              </p>
+              <button
+                onClick={() => {
+                  generatingRef.current.delete(activeLesson.id);
+                  setLessonError(null);
+                  setIsGeneratingLesson(false);
+                  // Trigger the generation effect by re-setting the index
+                  setActiveLessonIdx(idx => idx);
+                }}
+                className="bg-[#1A1614] text-[#F5F1E8] border-none py-3 px-6 text-[14px] font-medium rounded cursor-pointer hover:bg-[#C4553F] transition-colors"
+              >
+                Try again
+              </button>
+            </div>
+          ) : (
+            <LessonContent
+              moduleName="Course Lessons"
+              lessonNum={activeLessonIdx + 1}
+              lessonTitle={activeLesson.title}
+              body={activeLesson.body}
+              videoUrl={activeLesson.video_url}
+              citations={activeLesson.citations}
+              isComplete={completedLessonIds.has(activeLesson.id)}
+              onMarkComplete={handleMarkComplete}
+              goPrev={activeLessonIdx > 0 ? goPrev : null}
+              goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
+            />
+          )
         ) : (
           <div className="p-[60px] max-w-[700px] mx-auto text-[#1A1614] font-serif">
             No lessons generated yet.

@@ -14,11 +14,10 @@ export default function LoadingScreen() {
   const { topic, depth, time } = location.state || {};
 
   const steps = [
-    "Framing the curriculum",
-    "Searching authoritative sources",
-    "Drafting lesson content",
-    "Finding video companions",
-    "Organizing modules",
+    "Planning your course structure",
+    "Designing your learning path",
+    "Sequencing lessons",
+    "Preparing your course",
   ];
 
   useEffect(() => {
@@ -38,7 +37,7 @@ export default function LoadingScreen() {
         // 90-second client-side timeout — Edge Function hard limit is 150s.
         // If the server doesn't respond in time, show an actionable error.
         const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Course generation timed out. Please try a simpler topic or try again.")), 90000)
+          setTimeout(() => reject(new Error("Course generation timed out. Please try a simpler topic or try again.")), 45000)
         );
         
         const invocation = supabase.functions.invoke('generate-course', {
@@ -141,7 +140,7 @@ export default function LoadingScreen() {
           </div>
         ) : (
           <div className="text-[13px] text-[#8B6F4E] font-serif italic text-center">
-            Typically 60–120 seconds. We're reading real sources, not making things up.
+            Typically 15–25 seconds. Lesson content loads as you read.
           </div>
         )}
       </main>

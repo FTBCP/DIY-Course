@@ -7,12 +7,11 @@ The user will provide:
 - Depth: "overview", "intermediate", or "deep"
 - Time: "afternoon", "weekend", "week", or "month"
 
-Based on these constraints, generate an appropriate number of modules and lessons.
-IMPORTANT: To prevent system timeouts during generation, you MUST strictly limit the total number of lessons across the entire course to a MAXIMUM of 3 lessons total.
-For an "afternoon", aim for 1 module with 2 lessons.
-For a "weekend", aim for 1 module with 3 lessons.
-For a "week", aim for 1 module with 3 lessons.
-For a "month", aim for 1 module with 3 lessons.
+Based on these constraints, generate an appropriate number of modules and lessons:
+For an "afternoon", aim for 1 module with 3–4 lessons.
+For a "weekend", aim for 1–2 modules with 5–7 lessons total.
+For a "week", aim for 2–3 modules with 8–10 lessons total.
+For a "month", aim for 3–4 modules with 12–15 lessons total.
 
 Return the outline as a JSON object strictly following this structure:
 {

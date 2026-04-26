@@ -134,7 +134,7 @@ export default function Dashboard() {
         </form>
 
         <p className="mt-12 pt-8 border-t border-[#E0D5C0] text-[13px] text-[#8B6F4E] font-serif italic">
-          Generation takes about 30 seconds. Every lesson includes cited sources and a curated video.
+          Takes about 20 seconds to build your course. Lesson content loads as you read.
         </p>
 
         {/* ── Previous courses ─────────────────────────────────────── */}
