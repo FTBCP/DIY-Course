@@ -209,7 +209,7 @@ export default function CoursePlayer() {
 
       <div className="overflow-y-auto">
         {activeLesson ? (
-          isGeneratingLesson ? (
+          isGeneratingLesson || activeLesson.body === null ? (
             <div className="flex flex-col items-center justify-center min-h-screen py-16 px-8">
               <div className="w-8 h-8 rounded-full border-2 border-[#E0D5C0] border-t-[#C4553F] animate-spin mb-6" />
               <p className="font-serif text-[22px] text-[#1A1614] mb-2">

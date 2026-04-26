@@ -1,7 +1,8 @@
 import { marked } from "marked";
 import { Clock, PlayCircle, BookOpen, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations = [], isComplete, onMarkComplete, goPrev, goNext }) {
+export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations, isComplete, onMarkComplete, goPrev, goNext }) {
+  citations = citations || [];
   // Rough estimate of read time (200 words per minute)
   const wordCount = body ? body.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
