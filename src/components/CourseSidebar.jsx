@@ -1,11 +1,26 @@
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, X } from "lucide-react";
 
-export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx }) {
+const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
+
+// Anthropic claude-sonnet pricing: $3/MTok input, $15/MTok output
+function estimateCost(inputTokens, outputTokens) {
+  return (inputTokens * 3 + outputTokens * 15) / 1_000_000;
+}
+
+export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx, inputTokens = 0, outputTokens = 0, onClose }) {
   // calculate completion percentage
   const percentComplete = total > 0 ? Math.round((progress / total) * 100) : 0;
 
   return (
-    <aside className="bg-[#1A1614] text-[#F5F1E8] py-16 overflow-y-auto border-r border-[#2A2420] min-h-screen">
+    <aside className="bg-[#1A1614] text-[#F5F1E8] py-16 overflow-y-auto border-r border-[#2A2420] min-h-screen relative">
+      {/* Close button — mobile only */}
+      <button
+        onClick={onClose}
+        className="lg:hidden absolute top-4 right-4 text-[#8B6F4E] hover:text-[#F5F1E8] transition-colors p-1"
+        aria-label="Close menu"
+      >
+        <X size={20} />
+      </button>
       <div className="px-7 pb-6 mb-5 border-b border-[#2A2420]">
         <div className="text-[10px] tracking-[0.2em] uppercase text-[#8B6F4E] mb-2 font-semibold">
           Your Course
@@ -60,6 +75,19 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
           })}
         </div>
       ))}
+      {SHOW_COST && (inputTokens > 0 || outputTokens > 0) && (
+        <div className="px-7 pt-5 mt-4 border-t border-[#2A2420]">
+          <div className="text-[10px] tracking-[0.2em] uppercase text-[#5C4A3A] font-semibold mb-1.5">
+            Est. API Cost
+          </div>
+          <div className="font-mono text-[#C4553F] text-[15px] font-medium">
+            ${estimateCost(inputTokens, outputTokens).toFixed(4)}
+          </div>
+          <div className="text-[10px] text-[#5C4A3A] mt-0.5">
+            {(inputTokens + outputTokens).toLocaleString()} tokens
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

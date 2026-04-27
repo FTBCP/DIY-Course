@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Layout Alternatives</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #E8E3D8; font-family: 'Georgia', serif; color: #1A1614; }
+
+    .label {
+      text-align: center;
+      font-family: sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8B6F4E;
+      font-weight: 600;
+      padding: 32px 0 16px;
+    }
+    .label strong { color: #1A1614; font-size: 15px; display: block; margin-bottom: 4px; text-transform: none; letter-spacing: 0; }
+
+    /* ── Shared frame ── */
+    .frame {
+      max-width: 780px;
+      margin: 0 auto 48px;
+      background: #F5F1E8;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 24px rgba(0,0,0,0.10);
+    }
+    header {
+      border-bottom: 1px solid #E0D5C0;
+      padding: 0 36px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #F5F1E8;
+    }
+    .logo { font-size: 16px; font-weight: 600; }
+    .logo span { color: #C4553F; }
+    .header-right { font-size: 12px; color: #8B6F4E; font-family: sans-serif; }
+
+    /* shared */
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #8B6F4E;
+      font-weight: 600;
+      font-family: sans-serif;
+    }
+    .pill { padding: 7px 16px; border: 1.5px solid #E0D5C0; border-radius: 999px; font-size: 12px; font-weight: 500; background: #FAF6EC; color: #5C4A3A; font-family: sans-serif; display: inline-block; }
+    .pill.sel { background: #1A1614; color: #F5F1E8; border-color: #1A1614; }
+    .progress-track { height: 3px; background: #E0D5C0; border-radius: 2px; overflow: hidden; flex: 1; }
+    .progress-fill { height: 100%; background: #C4553F; border-radius: 2px; }
+    .btn-primary { background: #1A1614; color: #F5F1E8; border: none; padding: 11px 22px; font-size: 13px; font-weight: 500; border-radius: 5px; cursor: pointer; font-family: sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-outline { background: transparent; color: #1A1614; border: 1.5px solid #E0D5C0; padding: 9px 18px; font-size: 13px; font-weight: 500; border-radius: 5px; cursor: pointer; font-family: sans-serif; }
+    input[type=text] { width: 100%; padding: 11px 15px; font-size: 14px; background: #FAF6EC; border: 1.5px solid #E0D5C0; border-radius: 5px; color: #1A1614; font-family: sans-serif; outline: none; }
+    input::placeholder { color: #A89680; }
+    .trash { color: #C0AD98; cursor: pointer; }
+    .resume { font-size: 12px; color: #C4553F; font-family: sans-serif; font-weight: 600; white-space: nowrap; }
+
+    /* ══════════════════════════════════════════
+       OPTION A — Compact list rows + expandable form
+    ══════════════════════════════════════════ */
+    .a-body { padding: 32px 36px; }
+    .a-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .a-course-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 13px 0;
+      border-bottom: 1px solid #E0D5C0;
+      cursor: pointer;
+    }
+    .a-course-row:last-of-type { border-bottom: none; }
+    .a-title { font-size: 15px; font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .a-meta { font-size: 11px; color: #8B6F4E; font-family: sans-serif; white-space: nowrap; }
+    .a-expand {
+      margin-top: 24px;
+      border-top: 1.5px solid #E0D5C0;
+      padding-top: 28px;
+    }
+    .a-expand-label { font-size: 13px; color: #5C4A3A; font-family: sans-serif; margin-bottom: 16px; }
+    .a-form-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .a-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* ══════════════════════════════════════════
+       OPTION B — Two tabs
+    ══════════════════════════════════════════ */
+    .b-tabs { display: flex; border-bottom: 1.5px solid #E0D5C0; }
+    .b-tab {
+      padding: 14px 28px;
+      font-size: 13px;
+      font-family: sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      color: #8B6F4E;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1.5px;
+    }
+    .b-tab.active { color: #1A1614; border-bottom-color: #C4553F; }
+    .b-body { padding: 28px 36px; }
+    .b-course-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 4px;
+    }
+    .b-course-row:hover { background: #FAF6EC; }
+    .b-dot { width: 8px; height: 8px; border-radius: 50%; background: #E0D5C0; flex-shrink: 0; }
+    .b-dot.done { background: #C4553F; }
+    .b-dot.partial { background: #D4956A; }
+    .b-title { font-size: 15px; font-weight: 500; flex: 1; min-width: 0; }
+    .b-sub { font-size: 12px; color: #8B6F4E; font-family: sans-serif; }
+    .b-right { display: flex; align-items: center; gap: 12px; }
+
+    /* ══════════════════════════════════════════
+       OPTION C — Split pane (sidebar + main)
+    ══════════════════════════════════════════ */
+    .c-split { display: grid; grid-template-columns: 260px 1fr; min-height: 480px; }
+    .c-sidebar {
+      background: #EDE8DC;
+      border-right: 1.5px solid #E0D5C0;
+      padding: 28px 20px;
+    }
+    .c-new-btn {
+      width: 100%;
+      background: #1A1614;
+      color: #F5F1E8;
+      border: none;
+      padding: 11px 16px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .c-course-item {
+      padding: 10px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+    .c-course-item:hover { background: #E0D9CC; }
+    .c-course-item.active { background: #fff; }
+    .c-course-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+    .c-mini-progress { display: flex; align-items: center; gap: 8px; }
+    .c-mini-track { flex: 1; height: 2px; background: #D8D0C4; border-radius: 1px; overflow: hidden; }
+    .c-mini-fill { height: 100%; background: #C4553F; border-radius: 1px; }
+    .c-mini-label { font-size: 10px; color: #8B6F4E; font-family: sans-serif; white-space: nowrap; }
+    .c-main { padding: 36px 40px; }
+    .c-heading { font-size: 30px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .c-heading em { color: #C4553F; font-style: italic; font-weight: 400; }
+    .c-sub { font-size: 14px; color: #5C4A3A; font-family: sans-serif; line-height: 1.5; margin-bottom: 28px; }
+    .c-form-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B6F4E; font-family: sans-serif; font-weight: 600; margin-bottom: 8px; display: block; }
+    .c-form-group { margin-bottom: 20px; }
+    .c-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+<!-- ── Option A ── -->
+<div class="label">
+  <strong>Option A — Compact list + expandable form</strong>
+  Your courses as slim rows. "New course" is a button that reveals the form below.
+</div>
+<div class="frame">
+  <header>
+    <div class="logo">DIY<span>.</span>courses</div>
+    <div class="header-right">geoff@example.com</div>
+  </header>
+  <div class="a-body">
+    <div class="a-topbar">
+      <div class="section-label">Your courses</div>
+      <button class="btn-primary">+ New course</button>
+    </div>
+
+    <div class="a-course-row">
+      <div class="a-title">How Compound Interest Actually Works</div>
+      <div class="progress-track" style="max-width:120px"><div class="progress-fill" style="width:60%"></div></div>
+      <div class="a-meta">3 of 5</div>
+      <span class="resume">Resume →</span>
+      <svg class="trash" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+    <div class="a-course-row">
+      <div class="a-title">Acquiring a Small Business: A Practical Guide</div>
+      <div class="progress-track" style="max-width:120px"><div class="progress-fill" style="width:100%"></div></div>
+      <div class="a-meta">8 of 8 ✓</div>
+      <span class="resume">Review →</span>
+      <svg class="trash" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+    <div class="a-course-row">
+      <div class="a-title">Basic Photography for Beginners</div>
+      <div class="progress-track" style="max-width:120px"><div class="progress-fill" style="width:0%"></div></div>
+      <div class="a-meta">0 of 6</div>
+      <span class="resume">Start →</span>
+      <svg class="trash" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+
+    <!-- Expanded form (shown after clicking "+ New course") -->
+    <div class="a-expand">
+      <div class="a-expand-label">What do you want to learn?</div>
+      <input type="text" placeholder="e.g. How options trading works, Stoic philosophy…" style="margin-bottom:14px" />
+      <div class="a-form-row">
+        <div>
+          <div style="font-size:11px;color:#8B6F4E;font-family:sans-serif;margin-bottom:6px;">Depth</div>
+          <div class="a-pill-group">
+            <span class="pill">Overview</span><span class="pill sel">Intermediate</span><span class="pill">Deep dive</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#8B6F4E;font-family:sans-serif;margin-bottom:6px;">Time</div>
+          <div class="a-pill-group">
+            <span class="pill">Afternoon</span><span class="pill sel">Weekend</span><span class="pill">Week</span><span class="pill">Month</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;">
+        <button class="btn-primary">Generate →</button>
+        <button class="btn-outline">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Option B ── -->
+<div class="label">
+  <strong>Option B — Two tabs</strong>
+  "My Courses" and "New Course" as separate tabs. Clean switch, no scrolling.
+</div>
+<div class="frame">
+  <header>
+    <div class="logo">DIY<span>.</span>courses</div>
+    <div class="header-right">geoff@example.com</div>
+  </header>
+  <div class="b-tabs">
+    <div class="b-tab active">My Courses</div>
+    <div class="b-tab">New Course</div>
+  </div>
+  <div class="b-body">
+    <div class="b-course-row">
+      <div class="b-dot partial"></div>
+      <div>
+        <div class="b-title">How Compound Interest Actually Works</div>
+        <div class="b-sub">3 of 5 lessons · started Apr 20</div>
+      </div>
+      <div class="b-right">
+        <div class="progress-track" style="width:80px"><div class="progress-fill" style="width:60%"></div></div>
+        <span class="resume">Resume →</span>
+        <svg class="trash" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+    </div>
+    <div class="b-course-row">
+      <div class="b-dot done"></div>
+      <div>
+        <div class="b-title">Acquiring a Small Business: A Practical Guide</div>
+        <div class="b-sub">8 of 8 lessons · completed Apr 15</div>
+      </div>
+      <div class="b-right">
+        <div class="progress-track" style="width:80px"><div class="progress-fill" style="width:100%"></div></div>
+        <span class="resume">Review →</span>
+        <svg class="trash" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+    </div>
+    <div class="b-course-row">
+      <div class="b-dot"></div>
+      <div>
+        <div class="b-title">Basic Photography for Beginners</div>
+        <div class="b-sub">0 of 6 lessons · not started</div>
+      </div>
+      <div class="b-right">
+        <div class="progress-track" style="width:80px"><div class="progress-fill" style="width:0%"></div></div>
+        <span class="resume">Start →</span>
+        <svg class="trash" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Option C ── -->
+<div class="label">
+  <strong>Option C — App-style split pane</strong>
+  Sidebar lists your courses. Clicking "+ New course" shows the form on the right.
+</div>
+<div class="frame">
+  <header>
+    <div class="logo">DIY<span>.</span>courses</div>
+    <div class="header-right">geoff@example.com</div>
+  </header>
+  <div class="c-split">
+    <div class="c-sidebar">
+      <button class="c-new-btn">＋ New course</button>
+      <div class="section-label" style="margin-bottom:12px">Your courses</div>
+
+      <div class="c-course-item active">
+        <div class="c-course-name">How Compound Interest Actually Works</div>
+        <div class="c-mini-progress">
+          <div class="c-mini-track"><div class="c-mini-fill" style="width:60%"></div></div>
+          <div class="c-mini-label">3/5</div>
+        </div>
+      </div>
+      <div class="c-course-item">
+        <div class="c-course-name">Acquiring a Small Business</div>
+        <div class="c-mini-progress">
+          <div class="c-mini-track"><div class="c-mini-fill" style="width:100%"></div></div>
+          <div class="c-mini-label">8/8 ✓</div>
+        </div>
+      </div>
+      <div class="c-course-item">
+        <div class="c-course-name">Basic Photography for Beginners</div>
+        <div class="c-mini-progress">
+          <div class="c-mini-track"><div class="c-mini-fill" style="width:0%"></div></div>
+          <div class="c-mini-label">0/6</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="c-main">
+      <h2 class="c-heading">What would you like<br/>to <em>understand</em>?</h2>
+      <p class="c-sub">We'll research the web and build a course you can finish over a weekend or a month.</p>
+
+      <div class="c-form-group">
+        <label class="c-form-label">Your topic</label>
+        <input type="text" placeholder="e.g. Options trading, Stoic philosophy…" />
+      </div>
+      <div class="c-form-group">
+        <label class="c-form-label">Depth</label>
+        <div class="c-pills">
+          <span class="pill">Overview</span><span class="pill sel">Intermediate</span><span class="pill">Deep dive</span>
+        </div>
+      </div>
+      <div class="c-form-group">
+        <label class="c-form-label">Time</label>
+        <div class="c-pills">
+          <span class="pill">Afternoon</span><span class="pill sel">Weekend</span><span class="pill">Week</span><span class="pill">Month</span>
+        </div>
+      </div>
+      <button class="btn-primary" style="margin-top:8px">Generate my course →</button>
+    </div>
+  </div>
+</div>
+
+<div style="height:48px"></div>
+</body>
+</html>

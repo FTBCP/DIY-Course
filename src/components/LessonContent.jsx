@@ -1,21 +1,23 @@
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import { Clock, PlayCircle, BookOpen, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations = [], isComplete, onMarkComplete, goPrev, goNext }) {
+export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations, isComplete, onMarkComplete, goPrev, goNext }) {
+  citations = citations || [];
   // Rough estimate of read time (200 words per minute)
   const wordCount = body ? body.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
-  const htmlBody = body ? marked.parse(body) : "<p>No content available.</p>";
+  const htmlBody = body ? DOMPurify.sanitize(marked.parse(body)) : "<p>No content available.</p>";
 
   return (
-    <main className="py-16 px-18 max-w-[820px] mx-auto w-full">
+    <main className="py-8 px-5 lg:py-16 lg:px-18 max-w-[820px] mx-auto w-full">
       <div className="flex items-center gap-2 text-xs tracking-[0.15em] uppercase text-[#8B6F4E] font-semibold mb-5">
         <span>Module {moduleName}</span>
         <span>·</span>
         <span>Lesson {String(lessonNum).padStart(2, "0")}</span>
       </div>
       
-      <h1 className="font-serif text-[46px] font-medium leading-tight tracking-[-0.02em] m-0 mb-6 text-[#1A1614]">
+      <h1 className="font-serif text-[32px] lg:text-[46px] font-medium leading-tight tracking-[-0.02em] m-0 mb-6 text-[#1A1614]">
         {lessonTitle}
       </h1>
       

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mobile Mockups</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #E0D9CC; font-family: 'Georgia', serif; padding: 40px 20px 60px; }
+
+    .row { display: flex; gap: 48px; justify-content: center; flex-wrap: wrap; }
+
+    .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .phone-label { font-family: sans-serif; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #8B6F4E; font-weight: 600; text-align: center; }
+    .phone-label strong { display: block; color: #1A1614; font-size: 14px; text-transform: none; letter-spacing: 0; margin-bottom: 4px; }
+
+    /* Phone shell */
+    .phone {
+      width: 375px;
+      height: 720px;
+      background: #F5F1E8;
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18), inset 0 0 0 2px #C8BFB0;
+      position: relative;
+    }
+
+    /* ── Shared inner elements ── */
+    .topbar {
+      height: 52px;
+      background: #F5F1E8;
+      border-bottom: 1px solid #E0D5C0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: relative;
+    }
+    .back-link { font-family: sans-serif; font-size: 12px; color: #8B6F4E; display: flex; align-items: center; gap-4px; }
+    .logo { font-size: 15px; font-weight: 600; }
+    .logo span { color: #C4553F; }
+
+    .lesson-meta { padding: 20px 20px 0; font-family: sans-serif; }
+    .lesson-eyebrow { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: #8B6F4E; font-weight: 600; margin-bottom: 6px; }
+    .lesson-title { font-size: 22px; font-weight: 500; line-height: 1.2; letter-spacing: -0.02em; color: #1A1614; margin-bottom: 10px; }
+    .lesson-readtime { font-family: sans-serif; font-size: 11px; color: #8B6F4E; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #E0D5C0; }
+
+    .lesson-body { padding: 0 20px; font-size: 14px; line-height: 1.7; color: #2A2420; }
+    .lesson-body p { margin-bottom: 10px; }
+    .lesson-body h2 { font-size: 16px; font-weight: 600; margin: 16px 0 6px; color: #1A1614; }
+
+    /* ── Option A: floating pill button ── */
+    .a-pill-btn {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: #1A1614;
+      color: #F5F1E8;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-family: sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .a-pill-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #C4553F;
+    }
+
+    /* Overlay sidebar (Option A open state) */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10;
+    }
+    .overlay-backdrop {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(26,22,20,0.5);
+    }
+    .overlay-panel {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 300px;
+      background: #1A1614;
+      overflow-y: auto;
+      padding: 20px 0;
+    }
+    .overlay-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px 16px;
+      border-bottom: 1px solid #2A2420;
+      margin-bottom: 8px;
+    }
+    .overlay-title { font-size: 13px; color: #F5F1E8; font-weight: 500; font-family: sans-serif; }
+    .close-btn { background: none; border: none; color: #8B6F4E; font-size: 20px; cursor: pointer; line-height: 1; }
+    .sidebar-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      font-size: 12px;
+      color: #A89680;
+      font-family: sans-serif;
+    }
+    .sidebar-item.current { background: #2A2420; border-left-color: #C4553F; color: #F5F1E8; }
+    .sidebar-item.done { color: #7A6A56; }
+    .sidebar-dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #5C4A3A; flex-shrink: 0; margin-top: 1px; }
+    .sidebar-dot.done { background: #5C7A3A; border-color: #5C7A3A; }
+    .sidebar-dot.current { background: #C4553F; border-color: #C4553F; }
+
+    /* ── Option B: hamburger ── */
+    .hamburger {
+      display: flex; flex-direction: column; gap: 4px;
+      cursor: pointer; padding: 4px;
+    }
+    .hamburger span {
+      display: block; width: 20px; height: 2px;
+      background: #1A1614; border-radius: 1px;
+    }
+
+    /* B drawer (shown open) */
+    .b-drawer {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10;
+    }
+    .b-backdrop {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(26,22,20,0.5);
+    }
+    .b-panel {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 280px;
+      background: #1A1614;
+      display: flex;
+      flex-direction: column;
+    }
+    .b-panel-header {
+      padding: 20px;
+      border-bottom: 1px solid #2A2420;
+    }
+    .b-panel-logo { font-size: 15px; font-weight: 600; color: #F5F1E8; margin-bottom: 4px; }
+    .b-panel-logo span { color: #C4553F; }
+    .b-panel-course { font-size: 11px; color: #8B6F4E; font-family: sans-serif; }
+    .b-progress-track { height: 2px; background: #2A2420; border-radius: 1px; margin: 10px 0 4px; overflow: hidden; }
+    .b-progress-fill { height: 100%; width: 40%; background: #C4553F; border-radius: 1px; }
+    .b-progress-label { font-size: 10px; color: #5C4A3A; font-family: sans-serif; }
+    .b-items { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+    .b-close {
+      position: absolute;
+      top: 16px; right: -44px;
+      width: 36px; height: 36px;
+      background: #F5F1E8;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: #1A1614;
+      cursor: pointer;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+    }
+
+    /* progress bar bottom strip */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: #F5F1E8;
+      border-top: 1px solid #E0D5C0;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-btn {
+      font-family: sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #8B6F4E;
+      background: none;
+      border: 1.5px solid #E0D5C0;
+      border-radius: 5px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .nav-btn.primary {
+      background: #1A1614;
+      color: #F5F1E8;
+      border-color: #1A1614;
+    }
+  </style>
+</head>
+<body>
+
+<div style="text-align:center;margin-bottom:36px;">
+  <div style="font-family:sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#8B6F4E;font-weight:600;margin-bottom:6px;">Mobile layouts</div>
+  <div style="font-family:sans-serif;font-size:13px;color:#5C4A3A;">Each pair shows the default view (left) and the menu open (right)</div>
+</div>
+
+<div class="row">
+
+  <!-- ═══ OPTION A ═══ -->
+  <div class="phone-wrap">
+    <div class="phone-label">
+      <strong>Option A — Floating "Lessons" pill</strong>
+      Button in top bar opens a slide-in panel
+    </div>
+
+    <!-- A: Default (closed) -->
+    <div class="phone">
+      <div class="topbar">
+        <span class="back-link">← Home</span>
+        <button class="a-pill-btn">
+          <span class="a-pill-dot"></span>
+          Lessons 3/8
+        </button>
+      </div>
+      <div class="lesson-meta">
+        <div class="lesson-eyebrow">Lesson 03</div>
+        <div class="lesson-title">Understanding Amortization Schedules</div>
+        <div class="lesson-readtime">5 min read · Video included · 3 sources</div>
+      </div>
+      <div class="lesson-body">
+        <h2>What is Amortization?</h2>
+        <p>Amortization is the process of spreading loan payments over time. Each payment covers both interest and principal — but the ratio shifts dramatically over the life of the loan.</p>
+        <p>In the early years, the vast majority of your payment goes toward interest. As the loan matures, more goes toward paying down the actual balance.</p>
+        <h2>Why This Matters</h2>
+        <p>Most borrowers are surprised to learn how little principal they've paid down after years of on-time payments. This is especially pronounced with 30-year mortgages.</p>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-btn">← Prev</button>
+        <button class="nav-btn primary">Mark complete →</button>
+      </div>
+    </div>
+
+    <!-- A: Open -->
+    <div class="phone">
+      <div class="topbar">
+        <span class="back-link">← Home</span>
+        <button class="a-pill-btn">
+          <span class="a-pill-dot"></span>
+          Lessons 3/8
+        </button>
+      </div>
+      <div class="lesson-meta">
+        <div class="lesson-eyebrow">Lesson 03</div>
+        <div class="lesson-title">Understanding Amortization Schedules</div>
+      </div>
+      <!-- Overlay -->
+      <div class="overlay">
+        <div class="overlay-backdrop"></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <span class="overlay-title">Course Lessons</span>
+            <button class="close-btn">✕</button>
+          </div>
+          <div class="sidebar-item done"><div class="sidebar-dot done"></div>Introduction to Compound Interest</div>
+          <div class="sidebar-item done"><div class="sidebar-dot done"></div>The Rule of 72</div>
+          <div class="sidebar-item current"><div class="sidebar-dot current"></div>Understanding Amortization</div>
+          <div class="sidebar-item"><div class="sidebar-dot"></div>APR vs APY: What's the Difference?</div>
+          <div class="sidebar-item"><div class="sidebar-dot"></div>Building an Emergency Fund</div>
+          <div class="sidebar-item"><div class="sidebar-dot"></div>Investing vs. Paying Down Debt</div>
+          <div class="sidebar-item"><div class="sidebar-dot"></div>Tax-Advantaged Accounts</div>
+          <div class="sidebar-item"><div class="sidebar-dot"></div>Putting It All Together</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ OPTION B ═══ -->
+  <div class="phone-wrap">
+    <div class="phone-label">
+      <strong>Option B — Hamburger menu</strong>
+      Icon in header, full drawer slides in from left
+    </div>
+
+    <!-- B: Default (closed) -->
+    <div class="phone">
+      <div class="topbar">
+        <div class="hamburger">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="logo">DIY<span>.</span>courses</div>
+        <span style="font-family:sans-serif;font-size:11px;color:#8B6F4E;">3 of 8</span>
+      </div>
+      <div class="lesson-meta">
+        <div class="lesson-eyebrow">Lesson 03</div>
+        <div class="lesson-title">Understanding Amortization Schedules</div>
+        <div class="lesson-readtime">5 min read · Video included · 3 sources</div>
+      </div>
+      <div class="lesson-body">
+        <h2>What is Amortization?</h2>
+        <p>Amortization is the process of spreading loan payments over time. Each payment covers both interest and principal — but the ratio shifts dramatically over the life of the loan.</p>
+        <p>In the early years, the vast majority of your payment goes toward interest. As the loan matures, more goes toward paying down the actual balance.</p>
+        <h2>Why This Matters</h2>
+        <p>Most borrowers are surprised to learn how little principal they've paid down after years of on-time payments. This is especially pronounced with 30-year mortgages.</p>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-btn">← Prev</button>
+        <button class="nav-btn primary">Mark complete →</button>
+      </div>
+    </div>
+
+    <!-- B: Open -->
+    <div class="phone">
+      <div class="topbar">
+        <div class="hamburger"><span></span><span></span><span></span></div>
+        <div class="logo">DIY<span>.</span>courses</div>
+        <span style="font-family:sans-serif;font-size:11px;color:#8B6F4E;">3 of 8</span>
+      </div>
+      <!-- Drawer -->
+      <div class="b-drawer">
+        <div class="b-backdrop"></div>
+        <div class="b-panel">
+          <div class="b-close">✕</div>
+          <div class="b-panel-header">
+            <div class="b-panel-logo">DIY<span>.</span>courses</div>
+            <div class="b-panel-course">How Compound Interest Works</div>
+            <div class="b-progress-track"><div class="b-progress-fill"></div></div>
+            <div class="b-progress-label">3 of 8 lessons complete</div>
+          </div>
+          <div class="b-items">
+            <div class="sidebar-item done"><div class="sidebar-dot done"></div>Introduction to Compound Interest</div>
+            <div class="sidebar-item done"><div class="sidebar-dot done"></div>The Rule of 72</div>
+            <div class="sidebar-item current"><div class="sidebar-dot current"></div>Understanding Amortization</div>
+            <div class="sidebar-item"><div class="sidebar-dot"></div>APR vs APY: What's the Difference?</div>
+            <div class="sidebar-item"><div class="sidebar-dot"></div>Building an Emergency Fund</div>
+            <div class="sidebar-item"><div class="sidebar-dot"></div>Investing vs. Paying Down Debt</div>
+            <div class="sidebar-item"><div class="sidebar-dot"></div>Tax-Advantaged Accounts</div>
+            <div class="sidebar-item"><div class="sidebar-dot"></div>Putting It All Together</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

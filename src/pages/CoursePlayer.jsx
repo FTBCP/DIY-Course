@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import CourseSidebar from "../components/CourseSidebar";
 import LessonContent from "../components/LessonContent";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function CoursePlayer() {
@@ -15,9 +15,8 @@ export default function CoursePlayer() {
   const [loading, setLoading] = useState(true);
   const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
   const [lessonError, setLessonError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Tracks which lesson IDs have already been sent to generate-lesson so we
-  // never fire duplicate requests if the user navigates away and back quickly.
   const generatingRef = useRef(new Set());
 
   // ── Load course, lessons, and existing progress ───────────────────
@@ -54,7 +53,6 @@ export default function CoursePlayer() {
       const loadedLessons = lessonsData || [];
       setLessons(loadedLessons);
 
-      // ── Load progress records and resume ─────────────────────────
       if (user && loadedLessons.length > 0) {
         const lessonIds = loadedLessons.map(l => l.id);
 
@@ -100,8 +98,15 @@ export default function CoursePlayer() {
     setIsGeneratingLesson(true);
     setLessonError(null);
 
+    const timeoutId = setTimeout(() => {
+      setIsGeneratingLesson(false);
+      setLessonError("This lesson is taking too long to generate. Please try again.");
+      generatingRef.current.delete(lessonId);
+    }, 90000);
+
     supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
       .then(({ data, error }) => {
+        clearTimeout(timeoutId);
         if (error || !data?.success) {
           console.error('Lesson generation failed:', error || data?.error);
           setLessonError(data?.error || error?.message || "Failed to generate lesson. Please try again.");
@@ -112,6 +117,9 @@ export default function CoursePlayer() {
               ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url }
               : l
           ));
+          if (data.course_input_tokens !== undefined) {
+            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
+          }
         }
         setIsGeneratingLesson(false);
       });
@@ -157,6 +165,11 @@ export default function CoursePlayer() {
   const goPrev = () => { if (activeLessonIdx > 0) setActiveLessonIdx(activeLessonIdx - 1); };
   const goNext = () => { if (activeLessonIdx < lessons.length - 1) setActiveLessonIdx(activeLessonIdx + 1); };
 
+  const handleSelectLesson = (idx) => {
+    setActiveLessonIdx(idx);
+    setSidebarOpen(false);
+  };
+
   const sidebarModules = [{
     mod: "Course Lessons",
     items: lessons.map((l, idx) => ({
@@ -192,78 +205,124 @@ export default function CoursePlayer() {
   }
 
   return (
-    <div className="grid grid-cols-[300px_1fr] min-h-screen bg-[#F5F1E8]">
-      <div className="relative">
-        <Link to="/" className="absolute top-4 left-4 z-10 text-[#8B6F4E] hover:text-[#F5F1E8] transition-colors">
+    <div className="min-h-screen bg-[#F5F1E8]">
+
+      {/* ── Mobile topbar (hidden on desktop) ── */}
+      <div className="lg:hidden flex items-center justify-between px-4 h-12 bg-[#1A1614] border-b border-[#2A2420]">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="text-[#8B6F4E] hover:text-[#F5F1E8] transition-colors p-1"
+          aria-label="Open lesson menu"
+        >
+          <Menu size={20} />
+        </button>
+        <span className="font-serif text-sm text-[#F5F1E8] truncate max-w-[200px] px-3">
+          {course.title}
+        </span>
+        <Link
+          to="/"
+          className="text-[#8B6F4E] hover:text-[#F5F1E8] transition-colors p-1"
+          aria-label="Back to home"
+        >
           <ArrowLeft size={20} />
         </Link>
-        <CourseSidebar
-          courseTitle={course.title}
-          progress={completedCount}
-          total={lessons.length}
-          lessons={sidebarModules}
-          activeLessonIdx={activeLessonIdx}
-          setActiveLessonIdx={setActiveLessonIdx}
-        />
       </div>
 
-      <div className="overflow-y-auto">
-        {activeLesson ? (
-          isGeneratingLesson ? (
-            <div className="flex flex-col items-center justify-center min-h-screen py-16 px-8">
-              <div className="w-8 h-8 rounded-full border-2 border-[#E0D5C0] border-t-[#C4553F] animate-spin mb-6" />
-              <p className="font-serif text-[22px] text-[#1A1614] mb-2">
-                Writing your lesson…
-              </p>
-              <p className="text-[14px] text-[#8B6F4E] font-sans">
-                Researching sources. Usually takes 15–20 seconds.
-              </p>
-              {lessonError && (
-                <p className="mt-6 text-[14px] text-[#C4553F] text-center max-w-[400px]">
+      <div className="lg:grid lg:grid-cols-[300px_1fr] lg:min-h-screen">
+
+        {/* ── Sidebar ── */}
+        {/* Desktop: normal left column. Mobile: fixed overlay when sidebarOpen */}
+        <div className={`
+          fixed inset-0 z-50
+          lg:relative lg:inset-auto lg:z-auto lg:block
+          ${sidebarOpen ? 'block' : 'hidden lg:block'}
+        `}>
+          {/* Backdrop — mobile only */}
+          <div
+            className="absolute inset-0 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+          {/* Panel */}
+          <div className="relative w-[300px] h-full lg:h-auto">
+            <Link
+              to="/"
+              className="hidden lg:block absolute top-4 left-4 z-10 text-[#8B6F4E] hover:text-[#F5F1E8] transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <CourseSidebar
+              courseTitle={course.title}
+              progress={completedCount}
+              total={lessons.length}
+              lessons={sidebarModules}
+              activeLessonIdx={activeLessonIdx}
+              setActiveLessonIdx={handleSelectLesson}
+              inputTokens={course.input_tokens || 0}
+              outputTokens={course.output_tokens || 0}
+              onClose={() => setSidebarOpen(false)}
+            />
+          </div>
+        </div>
+
+        {/* ── Main content ── */}
+        <div className="overflow-y-auto">
+          {activeLesson ? (
+            isGeneratingLesson || activeLesson.body === null ? (
+              <div className="flex flex-col items-center justify-center min-h-[80vh] py-16 px-8">
+                <div className="w-8 h-8 rounded-full border-2 border-[#E0D5C0] border-t-[#C4553F] animate-spin mb-6" />
+                <p className="font-serif text-[22px] text-[#1A1614] mb-2">
+                  Writing your lesson…
+                </p>
+                <p className="text-[14px] text-[#8B6F4E] font-sans">
+                  Researching sources. Usually takes 15–20 seconds.
+                </p>
+                {lessonError && (
+                  <p className="mt-6 text-[14px] text-[#C4553F] text-center max-w-[400px]">
+                    {lessonError}
+                  </p>
+                )}
+              </div>
+            ) : lessonError ? (
+              <div className="flex flex-col items-center justify-center min-h-[80vh] py-16 px-8">
+                <p className="font-serif text-[22px] text-[#C4553F] mb-4">
+                  Couldn't generate this lesson
+                </p>
+                <p className="text-[14px] text-[#5C4A3A] font-sans max-w-[400px] text-center mb-6">
                   {lessonError}
                 </p>
-              )}
-            </div>
-          ) : lessonError ? (
-            <div className="flex flex-col items-center justify-center min-h-screen py-16 px-8">
-              <p className="font-serif text-[22px] text-[#C4553F] mb-4">
-                Couldn't generate this lesson
-              </p>
-              <p className="text-[14px] text-[#5C4A3A] font-sans max-w-[400px] text-center mb-6">
-                {lessonError}
-              </p>
-              <button
-                onClick={() => {
-                  generatingRef.current.delete(activeLesson.id);
-                  setLessonError(null);
-                  setIsGeneratingLesson(false);
-                  // Trigger the generation effect by re-setting the index
-                  setActiveLessonIdx(idx => idx);
-                }}
-                className="bg-[#1A1614] text-[#F5F1E8] border-none py-3 px-6 text-[14px] font-medium rounded cursor-pointer hover:bg-[#C4553F] transition-colors"
-              >
-                Try again
-              </button>
-            </div>
+                <button
+                  onClick={() => {
+                    generatingRef.current.delete(activeLesson.id);
+                    setLessonError(null);
+                    setIsGeneratingLesson(false);
+                    setActiveLessonIdx(idx => idx);
+                  }}
+                  className="bg-[#1A1614] text-[#F5F1E8] border-none py-3 px-6 text-[14px] font-medium rounded cursor-pointer hover:bg-[#C4553F] transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <LessonContent
+                moduleName="Course Lessons"
+                lessonNum={activeLessonIdx + 1}
+                lessonTitle={activeLesson.title}
+                body={activeLesson.body}
+                videoUrl={activeLesson.video_url}
+                citations={activeLesson.citations}
+                isComplete={completedLessonIds.has(activeLesson.id)}
+                onMarkComplete={handleMarkComplete}
+                goPrev={activeLessonIdx > 0 ? goPrev : null}
+                goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
+              />
+            )
           ) : (
-            <LessonContent
-              moduleName="Course Lessons"
-              lessonNum={activeLessonIdx + 1}
-              lessonTitle={activeLesson.title}
-              body={activeLesson.body}
-              videoUrl={activeLesson.video_url}
-              citations={activeLesson.citations}
-              isComplete={completedLessonIds.has(activeLesson.id)}
-              onMarkComplete={handleMarkComplete}
-              goPrev={activeLessonIdx > 0 ? goPrev : null}
-              goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
-            />
-          )
-        ) : (
-          <div className="p-[60px] max-w-[700px] mx-auto text-[#1A1614] font-serif">
-            No lessons generated yet.
-          </div>
-        )}
+            <div className="p-[60px] max-w-[700px] mx-auto text-[#1A1614] font-serif">
+              No lessons generated yet.
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

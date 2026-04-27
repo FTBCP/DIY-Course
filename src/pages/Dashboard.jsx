@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '../components/Header';
-import { ArrowRight, BookOpen, ChevronRight } from 'lucide-react';
+import { ArrowRight, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Dashboard() {
@@ -10,19 +10,72 @@ export default function Dashboard() {
   const [depth, setDepth] = useState('intermediate');
   const [time, setTime] = useState('weekend');
   const [courses, setCourses] = useState([]);
+  const [lessonCounts, setLessonCounts] = useState({});
+  const [completedCounts, setCompletedCounts] = useState({});
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [activeTab, setActiveTab] = useState('courses');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
-    async function fetchCourses() {
+    async function fetchData() {
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { data, error } = await supabase
         .from('courses')
         .select('id, title, topic, status, created_at')
         .eq('status', 'ready')
         .order('created_at', { ascending: false });
-      if (!error && data) setCourses(data);
+
+      if (error || !data || data.length === 0) {
+        setActiveTab('new');
+        setLoadingCourses(false);
+        return;
+      }
+
+      setCourses(data);
+
+      const courseIds = data.map(c => c.id);
+
+      // Lesson totals per course
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id, course_id')
+        .in('course_id', courseIds);
+
+      if (lessons) {
+        const totals = {};
+        const lessonToCourse = {};
+        lessons.forEach(l => {
+          totals[l.course_id] = (totals[l.course_id] || 0) + 1;
+          lessonToCourse[l.id] = l.course_id;
+        });
+        setLessonCounts(totals);
+
+        // Completed lesson counts per course for this user
+        if (user) {
+          const lessonIds = lessons.map(l => l.id);
+          const { data: progress } = await supabase
+            .from('progress')
+            .select('lesson_id')
+            .eq('user_id', user.id)
+            .not('completed_at', 'is', null)
+            .in('lesson_id', lessonIds);
+
+          if (progress) {
+            const completed = {};
+            progress.forEach(p => {
+              const cId = lessonToCourse[p.lesson_id];
+              if (cId) completed[cId] = (completed[cId] || 0) + 1;
+            });
+            setCompletedCounts(completed);
+          }
+        }
+      }
+
       setLoadingCourses(false);
     }
-    fetchCourses();
+
+    fetchData();
   }, []);
 
   const handleGenerate = (e) => {
@@ -31,145 +84,241 @@ export default function Dashboard() {
     navigate('/generating', { state: { topic, depth, time } });
   };
 
-  const formatDate = (iso) => new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
-  });
+  const handleDelete = async (courseId) => {
+    await supabase.from('courses').delete().eq('id', courseId);
+    setCourses(prev => prev.filter(c => c.id !== courseId));
+    setConfirmDeleteId(null);
+  };
+
+  const actionLabel = (courseId) => {
+    const total = lessonCounts[courseId] || 0;
+    const done = completedCounts[courseId] || 0;
+    if (total > 0 && done >= total) return 'Review';
+    if (done > 0) return 'Resume';
+    return 'Start';
+  };
+
+  const DEPTH_OPTIONS = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'intermediate', label: 'Intermediate' },
+    { id: 'deep', label: 'Deep dive' },
+  ];
+
+  const TIME_OPTIONS = [
+    { id: 'afternoon', label: 'An afternoon' },
+    { id: 'weekend', label: 'A weekend' },
+    { id: 'week', label: 'A week' },
+    { id: 'month', label: 'A month' },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5F1E8] text-[#1A1614] font-sans">
       <Header />
-      
-      <main className="max-w-[680px] mx-auto pt-[120px] px-8 pb-[80px]">
-        <div className="text-[11px] tracking-[0.18em] uppercase text-[#8B6F4E] font-semibold mb-5">
-          Start a new course
-        </div>
-        
-        <h1 className="font-serif text-[52px] leading-[1.05] font-medium tracking-[-0.02em] m-0 mb-5 text-[#1A1614]">
-          What would you like<br/>to <em className="italic font-normal text-[#C4553F]">understand</em>?
-        </h1>
-        
-        <p className="text-[17px] leading-[1.5] text-[#5C4A3A] mb-14 max-w-[520px]">
-          Tell us what you want to learn. We'll research the web, pull the best sources, and build you a course you can finish over a weekend or a month.
-        </p>
 
-        <form onSubmit={handleGenerate}>
-          <div className="mb-11">
-            <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">01</span>
-            <label className="block text-[22px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
-              Your topic
-            </label>
-            <input
-              className="w-full p-4 px-5 text-base bg-[#FAF6EC] border-[1.5px] border-[#E0D5C0] rounded text-[#1A1614] transition-all duration-150 focus:outline-none focus:border-[#C4553F] focus:bg-white placeholder:text-[#A89680]"
-              type="text"
-              placeholder="e.g. How compound interest works, Basic photography, Acquiring a small business..."
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              required
-            />
-          </div>
+      <main className="max-w-[700px] mx-auto pt-[80px] px-8 pb-[80px]">
 
-          <div className="mb-11">
-            <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">02</span>
-            <label className="block text-[22px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
-              How deep do you want to go?
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: "overview", label: "Overview" },
-                { id: "intermediate", label: "Intermediate" },
-                { id: "deep", label: "Deep dive" },
-              ].map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  className={`px-4.5 py-2.5 bg-[#FAF6EC] border-[1.5px] rounded-full text-sm font-medium cursor-pointer transition-all duration-150 
-                    ${depth === d.id 
-                      ? "bg-[#1A1614] text-[#F5F1E8] border-[#1A1614]" 
-                      : "border-[#E0D5C0] text-[#5C4A3A] hover:border-[#C4553F]"
-                    }`}
-                  onClick={() => setDepth(d.id)}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-11">
-            <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">03</span>
-            <label className="block text-[22px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
-              How much time do you have?
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: "afternoon", label: "An afternoon" },
-                { id: "weekend", label: "A weekend" },
-                { id: "week", label: "A week" },
-                { id: "month", label: "A month" },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={`px-4.5 py-2.5 bg-[#FAF6EC] border-[1.5px] rounded-full text-sm font-medium cursor-pointer transition-all duration-150 
-                    ${time === t.id 
-                      ? "bg-[#1A1614] text-[#F5F1E8] border-[#1A1614]" 
-                      : "border-[#E0D5C0] text-[#5C4A3A] hover:border-[#C4553F]"
-                    }`}
-                  onClick={() => setTime(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            disabled={!topic.trim()}
-            className="mt-6 bg-[#1A1614] text-[#F5F1E8] border-none py-4 px-8 text-[15px] font-medium tracking-[0.02em] cursor-pointer rounded inline-flex items-center gap-2.5 transition-all duration-150 hover:bg-[#C4553F] disabled:opacity-50 disabled:cursor-not-allowed"
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-[#E0D5C0] mb-10">
+          {courses.length > 0 && (
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`pb-3 mr-8 text-[14px] font-semibold font-sans border-b-2 transition-colors ${
+                activeTab === 'courses'
+                  ? 'border-[#C4553F] text-[#1A1614]'
+                  : 'border-transparent text-[#8B6F4E] hover:text-[#1A1614]'
+              }`}
+            >
+              My Courses
+            </button>
+          )}
+          <button
+            onClick={() => setActiveTab('new')}
+            className={`pb-3 text-[14px] font-semibold font-sans border-b-2 transition-colors ${
+              activeTab === 'new'
+                ? 'border-[#C4553F] text-[#1A1614]'
+                : 'border-transparent text-[#8B6F4E] hover:text-[#1A1614]'
+            }`}
           >
-            Generate my course
-            <ArrowRight size={16} />
+            New Course
           </button>
-        </form>
+        </div>
 
-        <p className="mt-12 pt-8 border-t border-[#E0D5C0] text-[13px] text-[#8B6F4E] font-serif italic">
-          Takes about 20 seconds to build your course. Lesson content loads as you read.
-        </p>
+        {/* ── My Courses tab ── */}
+        {activeTab === 'courses' && (
+          <div>
+            {loadingCourses ? (
+              <p className="text-[#8B6F4E] font-serif italic">Loading your courses…</p>
+            ) : (
+              <ul className="list-none p-0 m-0">
+                {courses.map((course) => {
+                  const total = lessonCounts[course.id] || 0;
+                  const done = completedCounts[course.id] || 0;
+                  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                  const isConfirming = confirmDeleteId === course.id;
 
-        {/* ── Previous courses ─────────────────────────────────────── */}
-        {!loadingCourses && courses.length > 0 && (
-          <div className="mt-16">
-            <div className="text-[11px] tracking-[0.18em] uppercase text-[#8B6F4E] font-semibold mb-6">
-              Your courses
-            </div>
-            <ul className="list-none p-0 m-0 flex flex-col gap-3">
-              {courses.map((course) => (
-                <li key={course.id}>
-                  <Link
-                    to={`/course/${course.id}`}
-                    className="flex items-center justify-between gap-4 p-5 bg-white border-[1.5px] border-[#E0D5C0] rounded hover:border-[#C4553F] transition-all duration-150 no-underline group"
-                  >
-                    <div className="flex items-start gap-4 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-[#FAF6EC] border border-[#E0D5C0] flex items-center justify-center shrink-0 mt-0.5">
-                        <BookOpen size={14} color="#8B6F4E" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-serif text-[17px] font-medium text-[#1A1614] leading-snug truncate">
-                          {course.title || course.topic}
+                  return (
+                    <li key={course.id} className="border-b border-[#E0D5C0] py-4 last:border-b-0">
+                      {isConfirming ? (
+                        /* Inline delete confirmation */
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-serif text-[15px] text-[#C4553F]">
+                            Delete "{course.title}"?
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleDelete(course.id)}
+                              className="text-[13px] font-semibold text-[#C4553F] font-sans hover:underline"
+                            >
+                              Yes, delete
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-[13px] text-[#8B6F4E] font-sans hover:text-[#1A1614]"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                        <div className="text-[12px] text-[#8B6F4E] mt-1">
-                          {formatDate(course.created_at)}
+                      ) : (
+                        /* Normal row */
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-serif text-[16px] font-medium text-[#1A1614] truncate mb-2">
+                              {course.title || course.topic}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-[3px] bg-[#E0D5C0] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-[#C4553F] rounded-full transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] text-[#8B6F4E] font-sans whitespace-nowrap">
+                                {done} of {total} lessons
+                              </span>
+                            </div>
+                          </div>
+
+                          <Link
+                            to={`/course/${course.id}`}
+                            className="text-[13px] font-semibold text-[#C4553F] font-sans whitespace-nowrap hover:underline no-underline"
+                          >
+                            {actionLabel(course.id)} →
+                          </Link>
+
+                          <button
+                            onClick={() => setConfirmDeleteId(course.id)}
+                            className="text-[#C0AD98] hover:text-[#C4553F] transition-colors p-1"
+                            title="Delete course"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color="#A89680" className="shrink-0 group-hover:text-[#C4553F] transition-colors" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            <button
+              onClick={() => setActiveTab('new')}
+              className="mt-10 text-[13px] font-semibold font-sans text-[#8B6F4E] hover:text-[#C4553F] transition-colors flex items-center gap-1.5"
+            >
+              + Start a new course
+            </button>
           </div>
         )}
+
+        {/* ── New Course tab ── */}
+        {activeTab === 'new' && (
+          <div>
+            <h1 className="font-serif text-[48px] leading-[1.05] font-medium tracking-[-0.02em] mb-5 text-[#1A1614]">
+              What would you like<br />to <em className="italic font-normal text-[#C4553F]">understand</em>?
+            </h1>
+
+            <p className="text-[16px] leading-[1.5] text-[#5C4A3A] mb-12 max-w-[520px]">
+              Tell us what you want to learn. We'll research the web, pull the best sources, and build you a course you can finish over a weekend or a month.
+            </p>
+
+            <form onSubmit={handleGenerate}>
+              <div className="mb-10">
+                <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">01</span>
+                <label className="block text-[20px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
+                  Your topic
+                </label>
+                <input
+                  className="w-full p-4 px-5 text-base bg-[#FAF6EC] border-[1.5px] border-[#E0D5C0] rounded text-[#1A1614] transition-all duration-150 focus:outline-none focus:border-[#C4553F] focus:bg-white placeholder:text-[#A89680]"
+                  type="text"
+                  placeholder="e.g. How compound interest works, Basic photography, Acquiring a small business..."
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="mb-10">
+                <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">02</span>
+                <label className="block text-[20px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
+                  How deep do you want to go?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {DEPTH_OPTIONS.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => setDepth(d.id)}
+                      className={`px-4 py-2.5 border-[1.5px] rounded-full text-sm font-medium cursor-pointer transition-all duration-150
+                        ${depth === d.id
+                          ? 'bg-[#1A1614] text-[#F5F1E8] border-[#1A1614]'
+                          : 'bg-[#FAF6EC] border-[#E0D5C0] text-[#5C4A3A] hover:border-[#C4553F]'
+                        }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-10">
+                <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">03</span>
+                <label className="block text-[20px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
+                  How much time do you have?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {TIME_OPTIONS.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTime(t.id)}
+                      className={`px-4 py-2.5 border-[1.5px] rounded-full text-sm font-medium cursor-pointer transition-all duration-150
+                        ${time === t.id
+                          ? 'bg-[#1A1614] text-[#F5F1E8] border-[#1A1614]'
+                          : 'bg-[#FAF6EC] border-[#E0D5C0] text-[#5C4A3A] hover:border-[#C4553F]'
+                        }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!topic.trim()}
+                className="mt-4 bg-[#1A1614] text-[#F5F1E8] border-none py-4 px-8 text-[15px] font-medium tracking-[0.02em] cursor-pointer rounded inline-flex items-center gap-2.5 transition-all duration-150 hover:bg-[#C4553F] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Generate my course
+                <ArrowRight size={16} />
+              </button>
+            </form>
+
+            <p className="mt-10 pt-8 border-t border-[#E0D5C0] text-[13px] text-[#8B6F4E] font-serif italic">
+              Takes about 20 seconds to build your course. Lesson content loads as you read.
+            </p>
+          </div>
+        )}
+
       </main>
     </div>
   );

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import Anthropic from "npm:@anthropic-ai/sdk@0.20.1";
+import Anthropic from "npm:@anthropic-ai/sdk@0.36.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,32 +8,25 @@ const corsHeaders = {
 };
 
 const LESSON_PROMPT = `
-You are an expert educator and writer with deep knowledge across many fields.
-Your task is to write a single comprehensive lesson for a course, based on your training knowledge.
+You are an expert educator. Use the web_search tool to research the lesson topic, then write the lesson.
 
 The user will provide:
-- Course Title: The overall course context
-- Lesson Title: The specific topic for this lesson
+- Course Title: the overall course context
+- Lesson Title: the specific topic to teach
 
-IMPORTANT INSTRUCTIONS:
-1. Write a thorough, accurate lesson using your knowledge. Be concrete, practical, and educational.
-2. The lesson body MUST be written in readable Markdown. Use headings (##, ###), bold text, bullet points, numbered lists, and paragraphs.
-3. Aim for approximately 400-600 words of substantive content.
-4. Include a "citations" array with 2-3 well-known, real reference sources (books, official documentation, or well-known websites) relevant to the topic. Only include sources you are highly confident exist — do not invent URLs.
+Write the lesson as plain Markdown (400-600 words). Use ## headings, **bold text**, and bullet points. Be concrete and educational.
 
-Return the lesson as a JSON object strictly following this structure:
-{
-  "body": "The markdown content of the lesson...",
-  "citations": [
-    {
-      "id": "1",
-      "title": "Title of the source",
-      "url": "https://example.com/source"
-    }
-  ]
-}
+At the very end of your response, add a divider and a Sources section listing the real URLs you found during research, like this:
 
-DO NOT include any markdown formatting around the JSON (e.g. \`\`\`json). Just return the raw JSON object.
+---
+**Sources:**
+- [Title of source](https://actual-url.com)
+- [Title of source](https://actual-url.com)
+
+Rules:
+- Only include sources from actual web search results. Never invent a URL.
+- If a source has no URL, leave it out.
+- Write the lesson content first, then the Sources section. Nothing else.
 `;
 
 serve(async (req) => {
@@ -69,7 +62,7 @@ serve(async (req) => {
     if (lessonError || !lesson) throw new Error("Lesson not found");
     if (lesson.courses.user_id !== user.id) throw new Error("Unauthorized");
 
-    // Already generated — return the existing content without re-generating
+    // Already generated — return existing content without re-generating
     if (lesson.body) {
       return new Response(JSON.stringify({
         success: true,
@@ -81,24 +74,43 @@ serve(async (req) => {
 
     const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY'), maxRetries: 0 });
 
-    // Generate lesson content
+    // Generate lesson content with web search grounding
     let lessonJson = { body: "Content generation failed.", citations: [] };
+    let lessonResponse;
     try {
-      const lessonResponse = await anthropic.messages.create({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 1500,
+      lessonResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 3000,
         system: LESSON_PROMPT,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
         messages: [{
           role: "user",
           content: `Course Title: ${lesson.courses.title}\nLesson Title: ${lesson.title}`,
         }]
-      }, { timeout: 45000 });
+      }, { timeout: 60000 });
 
-      const rawText = lessonResponse.content.find(c => c.type === 'text')?.text || "{}";
-      try {
-        lessonJson = JSON.parse(rawText.replace(/```json\n?|\n?```/g, '').trim());
-      } catch (e) {
-        console.error("Failed to parse lesson JSON:", rawText);
+      // Extract the final text block — web search may add other block types before it
+      const rawText = lessonResponse.content
+        .filter(c => c.type === 'text')
+        .map(c => c.text)
+        .join('') || "";
+
+      if (rawText) {
+        // Split body from the Sources section
+        const dividerIndex = rawText.lastIndexOf('\n---');
+        const bodyPart = dividerIndex !== -1 ? rawText.slice(0, dividerIndex).trim() : rawText.trim();
+        const sourcesPart = dividerIndex !== -1 ? rawText.slice(dividerIndex) : '';
+
+        // Parse markdown links from the Sources section: [Title](url)
+        const citations = [];
+        const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+        let match;
+        let idx = 1;
+        while ((match = linkRegex.exec(sourcesPart)) !== null) {
+          citations.push({ id: String(idx++), title: match[1], url: match[2] });
+        }
+
+        lessonJson = { body: bodyPart, citations };
       }
     } catch (e) {
       throw new Error("Lesson generation API error: " + e.message);
@@ -125,11 +137,38 @@ serve(async (req) => {
       console.error("YouTube search failed or timed out.");
     }
 
-    // Persist to DB
+    // Persist lesson content
     await adminClient
       .from('lessons')
       .update({ body: lessonJson.body, citations: lessonJson.citations || [], video_url: videoUrl })
       .eq('id', lesson_id);
+
+    // Add token usage to the course running total
+    const lessonUsage = lessonResponse?.usage;
+    if (lessonUsage) {
+      const { data: courseTokens } = await adminClient
+        .from('courses')
+        .select('input_tokens, output_tokens')
+        .eq('id', lesson.courses.id)
+        .single();
+
+      const newInputTokens = (courseTokens?.input_tokens || 0) + lessonUsage.input_tokens;
+      const newOutputTokens = (courseTokens?.output_tokens || 0) + lessonUsage.output_tokens;
+
+      await adminClient
+        .from('courses')
+        .update({ input_tokens: newInputTokens, output_tokens: newOutputTokens })
+        .eq('id', lesson.courses.id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        body: lessonJson.body,
+        citations: lessonJson.citations || [],
+        video_url: videoUrl,
+        course_input_tokens: newInputTokens,
+        course_output_tokens: newOutputTokens,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+    }
 
     return new Response(JSON.stringify({
       success: true,
