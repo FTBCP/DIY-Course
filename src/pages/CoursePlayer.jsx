@@ -114,7 +114,7 @@ export default function CoursePlayer() {
         } else {
           setLessons(prev => prev.map(l =>
             l.id === lessonId
-              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url }
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
               : l
           ));
           if (data.course_input_tokens !== undefined) {
@@ -122,6 +122,35 @@ export default function CoursePlayer() {
           }
         }
         setIsGeneratingLesson(false);
+      });
+  }, [activeLessonIdx, lessons]);
+
+  // ── Prefetch next lesson silently once current lesson is ready ───────
+  useEffect(() => {
+    const currentLesson = lessons[activeLessonIdx];
+    const nextLesson = lessons[activeLessonIdx + 1];
+
+    // Only run when current lesson is done and next exists but hasn't generated yet
+    if (!currentLesson?.body || !nextLesson || nextLesson.body !== null) return;
+    if (generatingRef.current.has(nextLesson.id)) return;
+
+    const lessonId = nextLesson.id;
+    generatingRef.current.add(lessonId);
+
+    supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
+      .then(({ data, error }) => {
+        if (!error && data?.success) {
+          setLessons(prev => prev.map(l =>
+            l.id === lessonId
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
+              : l
+          ));
+          if (data.course_input_tokens !== undefined) {
+            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
+          }
+        }
+        // If prefetch fails, the on-demand generator handles it when user navigates there
+        generatingRef.current.delete(lessonId);
       });
   }, [activeLessonIdx, lessons]);
 
@@ -181,6 +210,8 @@ export default function CoursePlayer() {
         : idx === activeLessonIdx
           ? "current"
           : "upcoming",
+      inputTokens: l.input_tokens || 0,
+      outputTokens: l.output_tokens || 0,
     }))
   }];
 
@@ -314,6 +345,8 @@ export default function CoursePlayer() {
                 onMarkComplete={handleMarkComplete}
                 goPrev={activeLessonIdx > 0 ? goPrev : null}
                 goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
+                inputTokens={activeLesson.input_tokens || 0}
+                outputTokens={activeLesson.output_tokens || 0}
               />
             )
           ) : (

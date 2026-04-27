@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '../components/Header';
-import { ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowRight, Trash2, Share2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Dashboard() {
@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [activeTab, setActiveTab] = useState('courses');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -22,7 +23,7 @@ export default function Dashboard() {
 
       const { data, error } = await supabase
         .from('courses')
-        .select('id, title, topic, status, created_at')
+        .select('id, title, topic, status, created_at, is_public, share_token')
         .eq('status', 'ready')
         .order('created_at', { ascending: false });
 
@@ -88,6 +89,22 @@ export default function Dashboard() {
     await supabase.from('courses').delete().eq('id', courseId);
     setCourses(prev => prev.filter(c => c.id !== courseId));
     setConfirmDeleteId(null);
+  };
+
+  const handleToggleShare = async (course) => {
+    const newIsPublic = !course.is_public;
+    const { error } = await supabase
+      .from('courses')
+      .update({ is_public: newIsPublic })
+      .eq('id', course.id);
+    if (!error) {
+      setCourses(prev => prev.map(c => c.id === course.id ? { ...c, is_public: newIsPublic } : c));
+      if (newIsPublic) {
+        navigator.clipboard.writeText(`${window.location.origin}/c/${course.share_token}`);
+        setCopiedId(course.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      }
+    }
   };
 
   const actionLabel = (courseId) => {
@@ -206,6 +223,18 @@ export default function Dashboard() {
                             {actionLabel(course.id)} →
                           </Link>
 
+                          <button
+                            onClick={() => handleToggleShare(course)}
+                            className={`transition-colors p-1 relative ${course.is_public ? 'text-[#C4553F]' : 'text-[#C0AD98] hover:text-[#C4553F]'}`}
+                            title={course.is_public ? 'Shared — click to copy link' : 'Share course'}
+                          >
+                            <Share2 size={14} />
+                            {copiedId === course.id && (
+                              <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-[#1A1614] text-[#F5F1E8] text-[10px] font-sans px-2 py-1 rounded whitespace-nowrap">
+                                Link copied!
+                              </span>
+                            )}
+                          </button>
                           <button
                             onClick={() => setConfirmDeleteId(course.id)}
                             className="text-[#C0AD98] hover:text-[#C4553F] transition-colors p-1"

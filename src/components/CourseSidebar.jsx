@@ -2,14 +2,39 @@ import { CheckCircle2, Circle, X } from "lucide-react";
 
 const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
 
-// Anthropic claude-sonnet pricing: $3/MTok input, $15/MTok output
-function estimateCost(inputTokens, outputTokens) {
-  return (inputTokens * 3 + outputTokens * 15) / 1_000_000;
+// Pricing per token (Anthropic April 2026 rates)
+const SONNET_IN  = 3  / 1_000_000;   // lessons use claude-sonnet-4-6
+const SONNET_OUT = 15 / 1_000_000;
+const HAIKU_IN   = 0.80 / 1_000_000; // outline uses claude-haiku-4-5
+const HAIKU_OUT  = 4   / 1_000_000;
+
+// Typical token counts per lesson (Sonnet + web search)
+const EST_LESSON_IN  = 1000;
+const EST_LESSON_OUT = 800;
+
+// Outline is generated with Haiku — a tiny fixed cost
+const EST_OUTLINE_IN  = 500;
+const EST_OUTLINE_OUT = 300;
+
+function lessonCost(inputTokens, outputTokens) {
+  return inputTokens * SONNET_IN + outputTokens * SONNET_OUT;
+}
+
+function outlineCost(inputTokens, outputTokens) {
+  return inputTokens * HAIKU_IN + outputTokens * HAIKU_OUT;
 }
 
 export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx, inputTokens = 0, outputTokens = 0, onClose }) {
-  // calculate completion percentage
   const percentComplete = total > 0 ? Math.round((progress / total) * 100) : 0;
+
+  // Estimated total: outline (Haiku) + all lessons (Sonnet)
+  const estimatedTotal =
+    outlineCost(EST_OUTLINE_IN, EST_OUTLINE_OUT) +
+    total * (EST_LESSON_IN * SONNET_IN + EST_LESSON_OUT * SONNET_OUT);
+
+  // Actual so far: the course input/output tokens are cumulative across outline + generated lessons.
+  // Outline tokens (Haiku) are a small share — using Sonnet rate for all slightly overestimates, but is acceptable.
+  const actualTotal = inputTokens * SONNET_IN + outputTokens * SONNET_OUT;
 
   return (
     <aside className="bg-[#1A1614] text-[#F5F1E8] py-16 overflow-y-auto border-r border-[#2A2420] min-h-screen relative">
@@ -29,7 +54,7 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
           {courseTitle}
         </h2>
         <div className="h-0.5 bg-[#2A2420] rounded-full mt-2 overflow-hidden">
-          <div 
+          <div
             className="h-full bg-[#C4553F] transition-all duration-300"
             style={{ width: `${percentComplete}%` }}
           ></div>
@@ -47,6 +72,7 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
           {group.items.map((l, li) => {
             const isCurrent = activeLessonIdx === l.flatIndex;
             const num = l.flatIndex + 1;
+            const hasActualCost = l.inputTokens > 0 || l.outputTokens > 0;
 
             return (
               <div
@@ -64,27 +90,40 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
                   {isCurrent && l.state === "complete" && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
                   {l.state === "upcoming" && !isCurrent && <Circle size={16} color="#5C4A3A" strokeWidth={1.5} />}
                 </span>
-                <span>
-                  <span className="font-serif text-[11px] italic text-[#8B6F4E] mr-0.5">
-                    {String(num).padStart(2, "0")} &nbsp;
+                <span className="flex flex-col gap-0.5">
+                  <span>
+                    <span className="font-serif text-[11px] italic text-[#8B6F4E] mr-0.5">
+                      {String(num).padStart(2, "0")} &nbsp;
+                    </span>
+                    {l.t}
                   </span>
-                  {l.t}
+                  {SHOW_COST && hasActualCost && (
+                    <span className="font-mono text-[10px] text-[#5C4A3A]">
+                      ${lessonCost(l.inputTokens, l.outputTokens).toFixed(4)}
+                    </span>
+                  )}
                 </span>
               </div>
             );
           })}
         </div>
       ))}
-      {SHOW_COST && (inputTokens > 0 || outputTokens > 0) && (
+
+      {SHOW_COST && (
         <div className="px-7 pt-5 mt-4 border-t border-[#2A2420]">
-          <div className="text-[10px] tracking-[0.2em] uppercase text-[#5C4A3A] font-semibold mb-1.5">
-            Est. API Cost
+          <div className="text-[10px] tracking-[0.2em] uppercase text-[#5C4A3A] font-semibold mb-2">
+            Course API Cost
           </div>
-          <div className="font-mono text-[#C4553F] text-[15px] font-medium">
-            ${estimateCost(inputTokens, outputTokens).toFixed(4)}
+          <div className="flex justify-between text-[11px] text-[#8B6F4E] mb-1">
+            <span>Estimated (all lessons)</span>
+            <span className="font-mono">~${estimatedTotal.toFixed(4)}</span>
           </div>
-          <div className="text-[10px] text-[#5C4A3A] mt-0.5">
-            {(inputTokens + outputTokens).toLocaleString()} tokens
+          <div className="flex justify-between text-[11px] text-[#8B6F4E] mb-1">
+            <span>Actual so far</span>
+            <span className="font-mono text-[#C4553F]">${actualTotal.toFixed(4)}</span>
+          </div>
+          <div className="text-[10px] text-[#5C4A3A] mt-1">
+            {(inputTokens + outputTokens).toLocaleString()} tokens · per-lesson cost shown above each title
           </div>
         </div>
       )}

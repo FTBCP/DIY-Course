@@ -80,8 +80,8 @@ serve(async (req) => {
     try {
       lessonResponse = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: 3000,
-        system: LESSON_PROMPT,
+        max_tokens: 1500,
+        system: [{ type: "text", text: LESSON_PROMPT, cache_control: { type: "ephemeral" } }],
         tools: [{ type: "web_search_20250305", name: "web_search" }],
         messages: [{
           role: "user",
@@ -113,68 +113,124 @@ serve(async (req) => {
         lessonJson = { body: bodyPart, citations };
       }
     } catch (e) {
+      if (e.status === 429) {
+        throw new Error("We're generating lessons a little too quickly. Please wait 30 seconds and try again.");
+      }
       throw new Error("Lesson generation API error: " + e.message);
     }
 
-    // Search YouTube
+    // Search YouTube with quality filter: ≥10k views, published ≤5yrs ago, channel ≥1yr old
     let videoUrl = null;
     try {
       const ytKey = Deno.env.get('YOUTUBE_API_KEY');
       if (ytKey) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const ytSearch = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(lesson.title + " " + lesson.courses.topic)}&type=video&key=${ytKey}&maxResults=3`,
-          { signal: controller.signal }
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const get = (url) => fetch(url, { signal: controller.signal });
+
+        // Step 1: search for candidates by relevance
+        const searchRes = await get(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(lesson.title + " " + lesson.courses.topic)}&type=video&key=${ytKey}&maxResults=5`
         );
-        clearTimeout(timeoutId);
-        const ytData = await ytSearch.json();
-        if (ytData.items && ytData.items.length > 0) {
-          videoUrl = `https://www.youtube.com/watch?v=${ytData.items[0].id.videoId}`;
+        const searchData = await searchRes.json();
+        const candidates = searchData.items || [];
+
+        if (candidates.length > 0) {
+          const videoIds = candidates.map(i => i.id.videoId).join(',');
+          const channelIds = [...new Set(candidates.map(i => i.snippet.channelId))].join(',');
+
+          // Steps 2+3: batch-fetch video stats and channel ages in parallel
+          const [videosRes, channelsRes] = await Promise.all([
+            get(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${ytKey}`),
+            get(`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelIds}&key=${ytKey}`),
+          ]);
+          clearTimeout(timeoutId);
+
+          const videosData = await videosRes.json();
+          const channelsData = await channelsRes.json();
+
+          // Map channelId -> creation date for fast lookup
+          const channelCreatedAt = {};
+          for (const ch of (channelsData.items || [])) {
+            channelCreatedAt[ch.id] = new Date(ch.snippet.publishedAt);
+          }
+
+          // Map videoId -> stats so we can iterate in search-relevance order
+          const videoStats = {};
+          for (const v of (videosData.items || [])) {
+            videoStats[v.id] = v;
+          }
+
+          const now = new Date();
+          const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+          const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+
+          // Pick the first candidate (in relevance order) that passes all three filters
+          for (const candidate of candidates) {
+            const vid = videoStats[candidate.id.videoId];
+            if (!vid) continue;
+
+            const views = parseInt(vid.statistics?.viewCount || '0', 10);
+            const publishedAt = new Date(vid.snippet.publishedAt);
+            const channelAge = channelCreatedAt[vid.snippet.channelId];
+
+            const passesViews = views >= 10000;
+            const passesRecency = publishedAt >= fiveYearsAgo;
+            const passesChannelAge = channelAge && channelAge <= oneYearAgo;
+
+            if (passesViews && passesRecency && passesChannelAge) {
+              videoUrl = `https://www.youtube.com/watch?v=${vid.id}`;
+              break;
+            }
+          }
+        } else {
+          clearTimeout(timeoutId);
         }
       }
     } catch (e) {
-      console.error("YouTube search failed or timed out.");
+      console.error("YouTube search failed or timed out:", e.message);
     }
 
-    // Persist lesson content
+    const lessonUsage = lessonResponse?.usage;
+    const lessonInputTokens = lessonUsage?.input_tokens || 0;
+    const lessonOutputTokens = lessonUsage?.output_tokens || 0;
+
+    // Persist lesson content + per-lesson token counts
     await adminClient
       .from('lessons')
-      .update({ body: lessonJson.body, citations: lessonJson.citations || [], video_url: videoUrl })
-      .eq('id', lesson_id);
-
-    // Add token usage to the course running total
-    const lessonUsage = lessonResponse?.usage;
-    if (lessonUsage) {
-      const { data: courseTokens } = await adminClient
-        .from('courses')
-        .select('input_tokens, output_tokens')
-        .eq('id', lesson.courses.id)
-        .single();
-
-      const newInputTokens = (courseTokens?.input_tokens || 0) + lessonUsage.input_tokens;
-      const newOutputTokens = (courseTokens?.output_tokens || 0) + lessonUsage.output_tokens;
-
-      await adminClient
-        .from('courses')
-        .update({ input_tokens: newInputTokens, output_tokens: newOutputTokens })
-        .eq('id', lesson.courses.id);
-
-      return new Response(JSON.stringify({
-        success: true,
+      .update({
         body: lessonJson.body,
         citations: lessonJson.citations || [],
         video_url: videoUrl,
-        course_input_tokens: newInputTokens,
-        course_output_tokens: newOutputTokens,
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-    }
+        input_tokens: lessonInputTokens,
+        output_tokens: lessonOutputTokens,
+      })
+      .eq('id', lesson_id);
+
+    // Add token usage to the course running total
+    const { data: courseTokens } = await adminClient
+      .from('courses')
+      .select('input_tokens, output_tokens')
+      .eq('id', lesson.courses.id)
+      .single();
+
+    const newInputTokens = (courseTokens?.input_tokens || 0) + lessonInputTokens;
+    const newOutputTokens = (courseTokens?.output_tokens || 0) + lessonOutputTokens;
+
+    await adminClient
+      .from('courses')
+      .update({ input_tokens: newInputTokens, output_tokens: newOutputTokens })
+      .eq('id', lesson.courses.id);
 
     return new Response(JSON.stringify({
       success: true,
       body: lessonJson.body,
       citations: lessonJson.citations || [],
       video_url: videoUrl,
+      lesson_input_tokens: lessonInputTokens,
+      lesson_output_tokens: lessonOutputTokens,
+      course_input_tokens: newInputTokens,
+      course_output_tokens: newOutputTokens,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 
   } catch (error) {

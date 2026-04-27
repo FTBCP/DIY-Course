@@ -2,8 +2,18 @@ import { useState, useEffect } from 'react';
 import { useLocation, Navigate, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import { Check, Circle } from 'lucide-react';
-
 import { supabase } from '../lib/supabase';
+
+const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
+
+const LESSON_COUNTS = { afternoon: 4, weekend: 6, week: 9, month: 13 };
+const SONNET_IN = 3 / 1_000_000;
+const SONNET_OUT = 15 / 1_000_000;
+
+function estimateCost(time) {
+  const lessons = LESSON_COUNTS[time] || 6;
+  return lessons * (1000 * SONNET_IN + 800 * SONNET_OUT);
+}
 
 export default function LoadingScreen() {
   const location = useLocation();
@@ -139,8 +149,15 @@ export default function LoadingScreen() {
             </button>
           </div>
         ) : (
-          <div className="text-[13px] text-[#8B6F4E] font-serif italic text-center">
-            Typically 15–25 seconds. Lesson content loads as you read.
+          <div className="text-center">
+            <div className="text-[13px] text-[#8B6F4E] font-serif italic">
+              Typically 10–20 seconds. Lesson content loads as you read.
+            </div>
+            {SHOW_COST && (
+              <div className="text-[11px] text-[#5C4A3A] font-mono mt-1.5">
+                Estimated cost: ~${estimateCost(time).toFixed(4)}
+              </div>
+            )}
           </div>
         )}
       </main>

@@ -48,32 +48,32 @@ serve(async (req) => {
     //   throw new Error("You've already generated a course today. Come back tomorrow to generate another.");
     // }
 
-    // Create the course record
-    const { data: newCourse, error: insertError } = await supabaseClient
-      .from('courses')
-      .insert({ user_id: user.id, topic, intake_answers: { depth, time }, title: "Generating..." })
-      .select()
-      .single();
-
-    if (insertError) throw insertError;
-    courseId = newCourse.id;
-
     const anthropic = new Anthropic({
       apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
       maxRetries: 0,
     });
 
-    // Generate outline only — lesson content is generated on-demand in generate-lesson
+    // Generate outline first — harm check happens inside this call before any DB writes
     let outlineResponse;
     try {
       outlineResponse = await anthropic.messages.create({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 2000,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1500,
         system: OUTLINE_PROMPT,
         messages: [{ role: "user", content: `Topic: ${topic}\nDepth: ${depth}\nTime: ${time}` }]
       }, { timeout: 40000 });
     } catch (e) {
       throw new Error("Failed to generate outline: " + e.message);
+    }
+
+    const HARM_RESPONSE = { success: false, harmful: true, error: "We're not able to create a course on that topic. Please try a different subject." };
+
+    // Empty content array means Claude's safety system blocked the request outright
+    if (!outlineResponse.content || outlineResponse.content.length === 0) {
+      return new Response(JSON.stringify(HARM_RESPONSE), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
 
     let outlineText = outlineResponse.content[0].text;
@@ -82,9 +82,31 @@ serve(async (req) => {
       outlineText = outlineText.replace(/```json\n?|\n?```/g, '').trim();
       outlineData = JSON.parse(outlineText);
     } catch (e) {
-      console.error("Failed to parse outline:", outlineText);
-      throw new Error("Failed to generate course outline format.");
+      // If JSON parsing fails, Claude likely returned a plain-text safety refusal
+      console.error("Failed to parse outline (possible safety refusal):", outlineText);
+      return new Response(JSON.stringify(HARM_RESPONSE), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
+
+    // Harm detection — our prompt asked Claude to return this signal for harmful topics
+    if (outlineData.error === "harmful_topic") {
+      return new Response(JSON.stringify(HARM_RESPONSE), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    // Create the course record — only reached for safe topics
+    const { data: newCourse, error: insertError } = await supabaseClient
+      .from('courses')
+      .insert({ user_id: user.id, topic, intake_answers: { depth, time }, title: "Generating..." })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+    courseId = newCourse.id;
 
     // Update course title + seed token count from outline generation
     // Uses adminClient — no UPDATE RLS policy exists for courses via user JWT

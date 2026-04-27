@@ -2,6 +2,9 @@ export const OUTLINE_PROMPT = `
 You are an expert curriculum designer and educator.
 Your task is to generate a comprehensive, structured course outline based on the user's topic, depth, and available time.
 
+IMPORTANT: First assess whether the topic involves harmful content — including weapons, violence, self-harm, illegal activities, hate speech, or anything that could cause serious harm if acted upon. If it does, return ONLY this JSON and nothing else:
+{"error": "harmful_topic", "message": "We're not able to create a course on that topic. Please try a different subject."}
+
 The user will provide:
 - Topic: The subject to learn
 - Depth: "overview", "intermediate", or "deep"

@@ -22,6 +22,10 @@ Four logical entities. Supabase manages `users` through its built-in auth system
 | topic | text | The raw topic from intake, required |
 | intake_answers | jsonb | `{depth, time}` from intake form |
 | status | text | `generating`, `complete`, or `failed` |
+| is_public | boolean | Whether the course is publicly shareable, default false |
+| share_token | uuid | Unique token for the public share link, auto-generated |
+| input_tokens | integer | Cumulative Claude input tokens used, default 0 |
+| output_tokens | integer | Cumulative Claude output tokens used, default 0 |
 | created_at | timestamptz | Auto-set |
 
 ### lessons
@@ -35,6 +39,8 @@ Four logical entities. Supabase manages `users` through its built-in auth system
 | citations | jsonb | Array of `{source_title, url, quote}` |
 | video_url | text | YouTube embed URL, nullable |
 | video_metadata | jsonb | `{channel, views, published_at}`, nullable |
+| input_tokens | integer | Claude input tokens used to generate this lesson, default 0 |
+| output_tokens | integer | Claude output tokens used to generate this lesson, default 0 |
 | created_at | timestamptz | Auto-set |
 
 ### progress

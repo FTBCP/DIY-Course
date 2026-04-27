@@ -5,12 +5,14 @@ import Dashboard from './pages/Dashboard'
 import LoadingScreen from './pages/LoadingScreen'
 import AuthWrapper from './components/AuthWrapper'
 import CoursePlayer from './pages/CoursePlayer'
+import PublicCourse from './pages/PublicCourse'
 
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/c/:shareToken" element={<PublicCourse />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route 
