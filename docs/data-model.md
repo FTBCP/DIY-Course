@@ -20,7 +20,8 @@ Four logical entities. Supabase manages `users` through its built-in auth system
 | user_id | uuid | FK → auth.users(id), cascade delete |
 | title | text | Set after outline generation (nullable initially) |
 | topic | text | The raw topic from intake, required |
-| intake_answers | jsonb | `{depth, time}` from intake form |
+| intake_answers | jsonb | `{experience}` from intake form |
+| outcomes | jsonb | Array of outcome strings generated during course creation, default `[]` |
 | status | text | `generating`, `complete`, or `failed` |
 | is_public | boolean | Whether the course is publicly shareable, default false |
 | share_token | uuid | Unique token for the public share link, auto-generated |

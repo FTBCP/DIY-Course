@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Landing Page — Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #F5F1E8;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: #1A1614;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .serif { font-family: 'Fraunces', Georgia, serif; }
+
+    /* ── Header ── */
+    header {
+      background: #1A1614;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 18px;
+      color: #F5F1E8;
+      font-style: italic;
+      letter-spacing: -0.01em;
+    }
+    .header-cta {
+      background: #C4553F;
+      color: #F5F1E8;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .header-cta:hover { background: #A33D2A; }
+
+    /* ── Hero ── */
+    .hero {
+      background: #1A1614;
+      padding: 72px 32px 80px;
+      text-align: center;
+    }
+    .hero-label {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #8B6F4E;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(36px, 5vw, 58px);
+      font-weight: 500;
+      color: #F5F1E8;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      max-width: 760px;
+      margin: 0 auto 20px;
+    }
+    .hero-title em {
+      font-style: italic;
+      color: #C4553F;
+    }
+    .hero-subtitle {
+      font-size: 17px;
+      color: #A89680;
+      max-width: 520px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 14px;
+      color: #C0AD98;
+      padding: 0 24px;
+      border-right: 1px solid #2A2420;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-icon { font-size: 15px; }
+    .stat strong { color: #F5F1E8; font-weight: 600; }
+
+    /* ── Hero CTA ── */
+    .hero-cta-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .btn-primary {
+      background: #C4553F;
+      color: #F5F1E8;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 16px 40px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #A33D2A; }
+    .hero-note {
+      font-size: 13px;
+      color: #5C4A3A;
+    }
+
+    /* ── What you'll learn ── */
+    .section {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 72px 32px;
+    }
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #8B6F4E;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 32px;
+      font-weight: 500;
+      color: #1A1614;
+      letter-spacing: -0.01em;
+      margin-bottom: 40px;
+      line-height: 1.2;
+    }
+
+    .outcomes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .outcome-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .outcome-check {
+      width: 20px;
+      height: 20px;
+      background: #C4553F;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .outcome-check svg { width: 11px; height: 11px; stroke: white; stroke-width: 2.5; fill: none; }
+    .outcome-text {
+      font-size: 16px;
+      color: #1A1614;
+      line-height: 1.5;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1.5px solid #E0D5C0;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    /* ── Lesson preview ── */
+    .preview-section {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 72px 32px;
+    }
+    .lesson-list {
+      list-style: none;
+      border: 1.5px solid #E0D5C0;
+      border-radius: 10px;
+      overflow: hidden;
+      background: white;
+    }
+    .lesson-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #E0D5C0;
+    }
+    .lesson-row:last-child { border-bottom: none; }
+    .lesson-row.free { background: #FAF6EC; }
+    .lesson-num {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 11px;
+      font-style: italic;
+      color: #8B6F4E;
+      width: 24px;
+      flex-shrink: 0;
+    }
+    .lesson-title-text {
+      font-size: 14px;
+      color: #1A1614;
+      flex: 1;
+      line-height: 1.4;
+    }
+    .lesson-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #E8F0E0;
+      color: #4A6A2A;
+    }
+    .badge.video {
+      background: #F0E8E0;
+      color: #6A3A2A;
+    }
+    .lock-icon {
+      font-size: 14px;
+      color: #C0AD98;
+    }
+    .read-time {
+      font-size: 12px;
+      color: #8B6F4E;
+    }
+
+    /* ── Social proof ── */
+    .social-section {
+      background: #FAF6EC;
+      border-top: 1.5px solid #E0D5C0;
+      border-bottom: 1.5px solid #E0D5C0;
+      padding: 56px 32px;
+      text-align: center;
+    }
+    .social-quote {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 24px;
+      font-style: italic;
+      color: #1A1614;
+      max-width: 600px;
+      margin: 0 auto 16px;
+      line-height: 1.4;
+    }
+    .social-attr {
+      font-size: 13px;
+      color: #8B6F4E;
+    }
+
+    /* ── Bottom CTA ── */
+    .bottom-cta {
+      background: #1A1614;
+      padding: 80px 32px;
+      text-align: center;
+    }
+    .bottom-cta-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(28px, 4vw, 44px);
+      color: #F5F1E8;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      line-height: 1.15;
+    }
+    .bottom-cta-title em { font-style: italic; color: #C4553F; }
+    .bottom-cta-sub {
+      font-size: 16px;
+      color: #8B6F4E;
+      margin-bottom: 36px;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }
+    .bottom-note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #3A2E28;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">DIY Courses</div>
+    <button class="header-cta">Create your own course →</button>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-label">Free course</div>
+    <h1 class="hero-title serif">
+      The Beginner's Guide to<br><em>Finger Painting</em>
+    </h1>
+    <p class="hero-subtitle">
+      Go from complete beginner to confident creator. Learn the techniques, materials, and creative instincts that make finger painting surprisingly powerful.
+    </p>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-icon">📚</span>
+        <span><strong>8</strong> lessons</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">⏱</span>
+        <span><strong>~75 min</strong> to complete</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">🎬</span>
+        <span><strong>6</strong> videos included</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">📖</span>
+        <span><strong>24</strong> cited sources</span>
+      </div>
+    </div>
+
+    <div class="hero-cta-wrap">
+      <button class="btn-primary">Start learning — it's free →</button>
+      <span class="hero-note">No account required to read this course</span>
+    </div>
+  </div>
+
+  <!-- What you'll learn -->
+  <div class="section">
+    <div class="section-label">What you'll learn</div>
+    <h2 class="section-title serif">By the end of this course, you'll be able to…</h2>
+    <div class="outcomes-list">
+      <div class="outcome-item">
+        <div class="outcome-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+        <div class="outcome-text">Choose the right paints, surfaces, and protective gear for any project</div>
+      </div>
+      <div class="outcome-item">
+        <div class="outcome-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+        <div class="outcome-text">Apply core techniques — blending, layering, and building texture with your hands</div>
+      </div>
+      <div class="outcome-item">
+        <div class="outcome-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+        <div class="outcome-text">Mix colors confidently directly on the canvas using basic color theory</div>
+      </div>
+      <div class="outcome-item">
+        <div class="outcome-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+        <div class="outcome-text">Create expressive compositions with intention rather than happy accidents</div>
+      </div>
+      <div class="outcome-item">
+        <div class="outcome-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+        <div class="outcome-text">Spot and fix the most common beginner mistakes before they ruin a piece</div>
+      </div>
+      <div class="outcome-item">
+        <div class="outcome-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+        <div class="outcome-text">Finish, preserve, and display your work with a developed personal style</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Course lessons -->
+  <div class="preview-section">
+    <div class="section-label">Course lessons</div>
+    <h2 class="section-title serif">Everything covered, start to finish</h2>
+
+    <ul class="lesson-list">
+      <li class="lesson-row free">
+        <span class="lesson-num">01</span>
+        <span class="lesson-title-text">Getting Started: Materials and Setup</span>
+        <div class="lesson-meta">
+          <span class="badge video">Video</span>
+          <span class="read-time">8 min</span>
+        </div>
+      </li>
+      <li class="lesson-row free">
+        <span class="lesson-num">02</span>
+        <span class="lesson-title-text">Core Techniques: Blending, Layering, and Texture</span>
+        <div class="lesson-meta">
+          <span class="badge video">Video</span>
+          <span class="read-time">10 min</span>
+        </div>
+      </li>
+      <li class="lesson-row free">
+        <span class="lesson-num">03</span>
+        <span class="lesson-title-text">Understanding Color: Theory and Mixing</span>
+        <div class="lesson-meta">
+          <span class="badge">Reading</span>
+          <span class="read-time">9 min</span>
+        </div>
+      </li>
+      <li class="lesson-row">
+        <span class="lesson-num">04</span>
+        <span class="lesson-title-text">Composition Basics: Filling the Canvas with Intent</span>
+        <div class="lesson-meta">
+          <span class="badge video">Video</span>
+          <span class="read-time">11 min</span>
+        </div>
+      </li>
+      <li class="lesson-row">
+        <span class="lesson-num">05</span>
+        <span class="lesson-title-text">Common Beginner Mistakes and How to Fix Them</span>
+        <div class="lesson-meta">
+          <span class="badge">Reading</span>
+          <span class="read-time">8 min</span>
+        </div>
+      </li>
+      <li class="lesson-row">
+        <span class="lesson-num">06</span>
+        <span class="lesson-title-text">Advanced Texture: Using Tools Alongside Your Hands</span>
+        <div class="lesson-meta">
+          <span class="badge video">Video</span>
+          <span class="read-time">10 min</span>
+        </div>
+      </li>
+      <li class="lesson-row">
+        <span class="lesson-num">07</span>
+        <span class="lesson-title-text">Developing Your Personal Style</span>
+        <div class="lesson-meta">
+          <span class="badge video">Video</span>
+          <span class="read-time">9 min</span>
+        </div>
+      </li>
+      <li class="lesson-row">
+        <span class="lesson-num">08</span>
+        <span class="lesson-title-text">Finishing and Preserving Your Work</span>
+        <div class="lesson-meta">
+          <span class="badge video">Video</span>
+          <span class="read-time">7 min</span>
+        </div>
+      </li>
+    </ul>
+
+    <p style="margin-top: 16px; font-size: 13px; color: #8B6F4E; font-style: italic; font-family: 'Fraunces', Georgia, serif;">
+      All lessons include cited sources from real research. Videos are curated from trusted educators.
+    </p>
+  </div>
+
+  <!-- Bottom CTA -->
+  <div class="bottom-cta">
+    <h2 class="bottom-cta-title serif">
+      Want to learn <em>anything</em><br>this thoroughly?
+    </h2>
+    <p class="bottom-cta-sub">
+      DIY Courses builds you a personalized, research-backed course on any topic in under 30 seconds. Your first course is free.
+    </p>
+    <button class="btn-primary">Create your free course →</button>
+    <p class="bottom-note">No credit card required. First course always free.</p>
+  </div>
+
+</body>
+</html>

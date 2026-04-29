@@ -193,9 +193,12 @@ export default function Dashboard() {
                         /* Normal row */
                         <div className="flex items-center gap-4">
                           <div className="flex-1 min-w-0">
-                            <div className="font-serif text-[16px] font-medium text-[#1A1614] truncate mb-2">
+                            <Link
+                              to={`/c/${course.share_token}`}
+                              className="font-serif text-[16px] font-medium text-[#1A1614] truncate mb-2 block hover:text-[#C4553F] transition-colors no-underline"
+                            >
                               {course.title || course.topic}
-                            </div>
+                            </Link>
                             <div className="flex items-center gap-3">
                               <div className="flex-1 h-[3px] bg-[#E0D5C0] rounded-full overflow-hidden">
                                 <div

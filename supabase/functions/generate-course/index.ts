@@ -115,6 +115,7 @@ serve(async (req) => {
       .from('courses')
       .update({
         title: outlineData.title,
+        outcomes: outlineData.outcomes || [],
         input_tokens: outlineUsage.input_tokens,
         output_tokens: outlineUsage.output_tokens,
       })

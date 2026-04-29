@@ -18,6 +18,10 @@ Tailor the course to the experience level as follows:
 Return the outline as a JSON object strictly following this structure:
 {
   "title": "A catchy, accurate title for the course",
+  "outcomes": [
+    "Concise outcome statement starting with an action verb (e.g. 'Mix colors confidently on the canvas')",
+    "... 4 to 6 total outcomes"
+  ],
   "modules": [
     {
       "title": "Module Title",
@@ -30,6 +34,8 @@ Return the outline as a JSON object strictly following this structure:
     }
   ]
 }
+
+The "outcomes" array should contain 4–6 short, punchy statements describing what the learner will be able to do after completing the course. Write them as direct action phrases (not "you will be able to") — for example: "Build a working budget from scratch", "Identify the three root causes of most negotiation failures".
 
 DO NOT include any markdown formatting around the JSON (e.g. \`\`\`json). Just return the raw JSON object.
 `;
