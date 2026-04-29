@@ -24,7 +24,7 @@ function outlineCost(inputTokens, outputTokens) {
   return inputTokens * HAIKU_IN + outputTokens * HAIKU_OUT;
 }
 
-export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx, inputTokens = 0, outputTokens = 0, onClose }) {
+export default function CourseSidebar({ courseTitle, progress, total, lessons, activeLessonIdx, setActiveLessonIdx, inputTokens = 0, outputTokens = 0, backgroundGeneratingCount = 0, onClose }) {
   const percentComplete = total > 0 ? Math.round((progress / total) * 100) : 0;
 
   // Estimated total: outline (Haiku) + all lessons (Sonnet)
@@ -62,6 +62,12 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
         <div className="text-xs text-[#8B6F4E] mt-2 font-sans">
           {progress} of {total} lessons complete
         </div>
+        {backgroundGeneratingCount > 0 && (
+          <div className="flex items-center gap-2 mt-3">
+            <span className="w-3 h-3 rounded-full border-2 border-[#3A2E28] border-t-[#C4553F] animate-spin inline-block shrink-0" />
+            <span className="text-xs text-[#8B6F4E] font-sans">Preparing your lessons…</span>
+          </div>
+        )}
       </div>
 
       {lessons.map((group, gi) => (
@@ -88,7 +94,10 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
                   {l.state === "complete" && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
                   {isCurrent && l.state !== "complete" && <Circle size={16} color="#C4553F" strokeWidth={2.5} fill="#C4553F" />}
                   {isCurrent && l.state === "complete" && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
-                  {l.state === "upcoming" && !isCurrent && <Circle size={16} color="#5C4A3A" strokeWidth={1.5} />}
+                  {l.state === "upcoming" && !isCurrent && !l.backgroundGenerating && <Circle size={16} color="#5C4A3A" strokeWidth={1.5} />}
+                  {l.state === "upcoming" && !isCurrent && l.backgroundGenerating && (
+                    <span className="w-4 h-4 rounded-full border-2 border-[#3A2E28] border-t-[#8B6F4E] animate-spin inline-block" />
+                  )}
                 </span>
                 <span className="flex flex-col gap-0.5">
                   <span>

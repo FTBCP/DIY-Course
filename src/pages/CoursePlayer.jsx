@@ -16,8 +16,41 @@ export default function CoursePlayer() {
   const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
   const [lessonError, setLessonError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [backgroundGeneratingIds, setBackgroundGeneratingIds] = useState(new Set());
 
   const generatingRef = useRef(new Set());
+  const lessonsRef = useRef([]);
+
+  // Keep lessonsRef current so callbacks always read fresh lesson state
+  lessonsRef.current = lessons;
+
+  // ── Background generator — reads from lessonsRef, chains until all lessons are done ──
+  const generateNextInBackground = useCallback(() => {
+    const next = lessonsRef.current.find(l => l.body === null && !generatingRef.current.has(l.id));
+    if (!next) return;
+
+    const lessonId = next.id;
+    generatingRef.current.add(lessonId);
+    setBackgroundGeneratingIds(prev => new Set([...prev, lessonId]));
+
+    supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
+      .then(({ data, error }) => {
+        generatingRef.current.delete(lessonId);
+        setBackgroundGeneratingIds(prev => { const s = new Set(prev); s.delete(lessonId); return s; });
+        if (!error && data?.success) {
+          setLessons(prev => prev.map(l =>
+            l.id === lessonId
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
+              : l
+          ));
+          if (data.course_input_tokens !== undefined) {
+            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
+          }
+        }
+        // Continue to the next lesson whether this one succeeded or failed
+        setTimeout(generateNextInBackground, 500);
+      });
+  }, []);
 
   // ── Load course, lessons, and existing progress ───────────────────
   useEffect(() => {
@@ -120,37 +153,10 @@ export default function CoursePlayer() {
           if (data.course_input_tokens !== undefined) {
             setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
           }
+          // Kick off background generation of remaining lessons
+          setTimeout(generateNextInBackground, 500);
         }
         setIsGeneratingLesson(false);
-      });
-  }, [activeLessonIdx, lessons]);
-
-  // ── Prefetch next lesson silently once current lesson is ready ───────
-  useEffect(() => {
-    const currentLesson = lessons[activeLessonIdx];
-    const nextLesson = lessons[activeLessonIdx + 1];
-
-    // Only run when current lesson is done and next exists but hasn't generated yet
-    if (!currentLesson?.body || !nextLesson || nextLesson.body !== null) return;
-    if (generatingRef.current.has(nextLesson.id)) return;
-
-    const lessonId = nextLesson.id;
-    generatingRef.current.add(lessonId);
-
-    supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
-      .then(({ data, error }) => {
-        if (!error && data?.success) {
-          setLessons(prev => prev.map(l =>
-            l.id === lessonId
-              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
-              : l
-          ));
-          if (data.course_input_tokens !== undefined) {
-            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
-          }
-        }
-        // If prefetch fails, the on-demand generator handles it when user navigates there
-        generatingRef.current.delete(lessonId);
       });
   }, [activeLessonIdx, lessons]);
 
@@ -212,11 +218,13 @@ export default function CoursePlayer() {
           : "upcoming",
       inputTokens: l.input_tokens || 0,
       outputTokens: l.output_tokens || 0,
+      backgroundGenerating: backgroundGeneratingIds.has(l.id),
     }))
   }];
 
   const completedCount = completedLessonIds.size;
   const activeLesson = lessons[activeLessonIdx];
+  const backgroundGeneratingCount = backgroundGeneratingIds.size;
 
   // ── Render ────────────────────────────────────────────────────────
   if (loading) {
@@ -290,6 +298,7 @@ export default function CoursePlayer() {
               setActiveLessonIdx={handleSelectLesson}
               inputTokens={course.input_tokens || 0}
               outputTokens={course.output_tokens || 0}
+              backgroundGeneratingCount={backgroundGeneratingCount}
               onClose={() => setSidebarOpen(false)}
             />
           </div>
