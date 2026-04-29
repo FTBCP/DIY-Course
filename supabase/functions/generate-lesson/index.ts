@@ -128,9 +128,9 @@ serve(async (req) => {
         const timeoutId = setTimeout(() => controller.abort(), 12000);
         const get = (url) => fetch(url, { signal: controller.signal });
 
-        // Step 1: search for candidates by relevance
+        // Step 1: search for candidates by relevance — "tutorial" biases toward educational content
         const searchRes = await get(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(lesson.title + " " + lesson.courses.topic)}&type=video&key=${ytKey}&maxResults=5`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(lesson.title + " " + lesson.courses.topic + " tutorial")}&type=video&key=${ytKey}&maxResults=5`
         );
         const searchData = await searchRes.json();
         const candidates = searchData.items || [];
@@ -165,7 +165,8 @@ serve(async (req) => {
           const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
           const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
 
-          // Pick the first candidate (in relevance order) that passes all three filters
+          // Collect all candidates that pass the stats filters
+          const passingCandidates = [];
           for (const candidate of candidates) {
             const vid = videoStats[candidate.id.videoId];
             if (!vid) continue;
@@ -174,13 +175,34 @@ serve(async (req) => {
             const publishedAt = new Date(vid.snippet.publishedAt);
             const channelAge = channelCreatedAt[vid.snippet.channelId];
 
-            const passesViews = views >= 10000;
-            const passesRecency = publishedAt >= fiveYearsAgo;
-            const passesChannelAge = channelAge && channelAge <= oneYearAgo;
+            if (views >= 10000 && publishedAt >= fiveYearsAgo && channelAge && channelAge <= oneYearAgo) {
+              passingCandidates.push({ id: vid.id, title: vid.snippet.title, channel: vid.snippet.channelTitle });
+            }
+          }
 
-            if (passesViews && passesRecency && passesChannelAge) {
-              videoUrl = `https://www.youtube.com/watch?v=${vid.id}`;
-              break;
+          // Ask Claude Haiku to pick the most educational video, or reject all
+          if (passingCandidates.length > 0) {
+            try {
+              const videoList = passingCandidates.map((v, i) => `${i + 1}. "${v.title}" by ${v.channel}`).join('\n');
+              const filterRes = await anthropic.messages.create({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 10,
+                messages: [{
+                  role: "user",
+                  content: `You are screening YouTube videos for an educational lesson.\n\nLesson: ${lesson.title}\nCourse: ${lesson.courses.title}\n\nCandidates:\n${videoList}\n\nWhich number is the most clearly educational and appropriate video? Reply with just the number, or "none" if none are appropriate.`,
+                }],
+              }, { timeout: 10000 });
+
+              const pick = filterRes.content[0]?.text?.trim().toLowerCase() ?? 'none';
+              if (pick !== 'none') {
+                const idx = parseInt(pick, 10) - 1;
+                if (idx >= 0 && idx < passingCandidates.length) {
+                  videoUrl = `https://www.youtube.com/watch?v=${passingCandidates[idx].id}`;
+                }
+              }
+            } catch (e) {
+              // Filter call failed — fall back to first passing candidate
+              videoUrl = `https://www.youtube.com/watch?v=${passingCandidates[0].id}`;
             }
           }
         } else {
