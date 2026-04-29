@@ -6,13 +6,12 @@ import { supabase } from '../lib/supabase';
 
 const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
 
-const LESSON_COUNTS = { afternoon: 4, weekend: 6, week: 9, month: 13 };
 const SONNET_IN = 3 / 1_000_000;
 const SONNET_OUT = 15 / 1_000_000;
+const ESTIMATED_LESSONS = 7;
 
-function estimateCost(time) {
-  const lessons = LESSON_COUNTS[time] || 6;
-  return lessons * (1000 * SONNET_IN + 800 * SONNET_OUT);
+function estimateCost() {
+  return ESTIMATED_LESSONS * (1000 * SONNET_IN + 800 * SONNET_OUT);
 }
 
 export default function LoadingScreen() {
@@ -21,7 +20,7 @@ export default function LoadingScreen() {
   const [stepIdx, setStepIdx] = useState(0);
   const [errorMsg, setErrorMsg] = useState(null);
   
-  const { topic, depth, time } = location.state || {};
+  const { topic, experience } = location.state || {};
 
   const steps = [
     "Planning your course structure",
@@ -51,7 +50,7 @@ export default function LoadingScreen() {
         );
         
         const invocation = supabase.functions.invoke('generate-course', {
-          body: { topic, depth, time }
+          body: { topic, experience }
         });
         
         const { data, error } = await Promise.race([invocation, timeout]);
@@ -86,7 +85,7 @@ export default function LoadingScreen() {
       isMounted = false;
       clearInterval(t);
     };
-  }, [topic, depth, time, navigate, steps.length]);
+  }, [topic, experience, navigate, steps.length]);
 
   // If user navigates here directly without state from the form, redirect back
   if (!topic) {
@@ -155,7 +154,7 @@ export default function LoadingScreen() {
             </div>
             {SHOW_COST && (
               <div className="text-[11px] text-[#5C4A3A] font-mono mt-1.5">
-                Estimated cost: ~${estimateCost(time).toFixed(4)}
+                Estimated cost: ~${estimateCost().toFixed(4)}
               </div>
             )}
           </div>

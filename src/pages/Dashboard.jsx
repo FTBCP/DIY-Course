@@ -7,8 +7,7 @@ import { supabase } from '../lib/supabase';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
-  const [depth, setDepth] = useState('intermediate');
-  const [time, setTime] = useState('weekend');
+  const [experience, setExperience] = useState('beginner');
   const [courses, setCourses] = useState([]);
   const [lessonCounts, setLessonCounts] = useState({});
   const [completedCounts, setCompletedCounts] = useState({});
@@ -82,7 +81,7 @@ export default function Dashboard() {
   const handleGenerate = (e) => {
     e.preventDefault();
     if (!topic.trim()) return;
-    navigate('/generating', { state: { topic, depth, time } });
+    navigate('/generating', { state: { topic, experience } });
   };
 
   const handleDelete = async (courseId) => {
@@ -115,17 +114,11 @@ export default function Dashboard() {
     return 'Start';
   };
 
-  const DEPTH_OPTIONS = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'intermediate', label: 'Intermediate' },
-    { id: 'deep', label: 'Deep dive' },
-  ];
-
-  const TIME_OPTIONS = [
-    { id: 'afternoon', label: 'An afternoon' },
-    { id: 'weekend', label: 'A weekend' },
-    { id: 'week', label: 'A week' },
-    { id: 'month', label: 'A month' },
+  const EXPERIENCE_OPTIONS = [
+    { id: 'beginner', label: 'Complete beginner' },
+    { id: 'some-background', label: 'Some background' },
+    { id: 'knowledgeable', label: 'Fairly knowledgeable' },
+    { id: 'refresher', label: 'Just a refresher' },
   ];
 
   return (
@@ -289,44 +282,21 @@ export default function Dashboard() {
               <div className="mb-10">
                 <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">02</span>
                 <label className="block text-[20px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
-                  How deep do you want to go?
+                  How familiar are you with this topic?
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {DEPTH_OPTIONS.map((d) => (
+                  {EXPERIENCE_OPTIONS.map((e) => (
                     <button
-                      key={d.id}
+                      key={e.id}
                       type="button"
-                      onClick={() => setDepth(d.id)}
+                      onClick={() => setExperience(e.id)}
                       className={`px-4 py-2.5 border-[1.5px] rounded-full text-sm font-medium cursor-pointer transition-all duration-150
-                        ${depth === d.id
+                        ${experience === e.id
                           ? 'bg-[#1A1614] text-[#F5F1E8] border-[#1A1614]'
                           : 'bg-[#FAF6EC] border-[#E0D5C0] text-[#5C4A3A] hover:border-[#C4553F]'
                         }`}
                     >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-10">
-                <span className="font-serif italic text-sm text-[#8B6F4E] mb-2 block">03</span>
-                <label className="block text-[20px] font-medium tracking-[-0.01em] mb-4 text-[#1A1614] font-serif">
-                  How much time do you have?
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {TIME_OPTIONS.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTime(t.id)}
-                      className={`px-4 py-2.5 border-[1.5px] rounded-full text-sm font-medium cursor-pointer transition-all duration-150
-                        ${time === t.id
-                          ? 'bg-[#1A1614] text-[#F5F1E8] border-[#1A1614]'
-                          : 'bg-[#FAF6EC] border-[#E0D5C0] text-[#5C4A3A] hover:border-[#C4553F]'
-                        }`}
-                    >
-                      {t.label}
+                      {e.label}
                     </button>
                   ))}
                 </div>

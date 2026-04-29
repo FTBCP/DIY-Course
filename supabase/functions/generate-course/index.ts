@@ -17,7 +17,7 @@ serve(async (req) => {
   let supabaseClient;
 
   try {
-    const { topic, depth, time } = await req.json();
+    const { topic, experience } = await req.json();
 
     supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -60,7 +60,7 @@ serve(async (req) => {
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1500,
         system: OUTLINE_PROMPT,
-        messages: [{ role: "user", content: `Topic: ${topic}\nDepth: ${depth}\nTime: ${time}` }]
+        messages: [{ role: "user", content: `Topic: ${topic}\nExperience level: ${experience}` }]
       }, { timeout: 40000 });
     } catch (e) {
       throw new Error("Failed to generate outline: " + e.message);
@@ -101,7 +101,7 @@ serve(async (req) => {
     // Create the course record — only reached for safe topics
     const { data: newCourse, error: insertError } = await supabaseClient
       .from('courses')
-      .insert({ user_id: user.id, topic, intake_answers: { depth, time }, title: "Generating..." })
+      .insert({ user_id: user.id, topic, intake_answers: { experience }, title: "Generating..." })
       .select()
       .single();
 
