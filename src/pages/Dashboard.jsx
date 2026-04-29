@@ -23,6 +23,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('courses')
         .select('id, title, topic, status, created_at, is_public, share_token')
+        .eq('user_id', user.id)
         .eq('status', 'ready')
         .order('created_at', { ascending: false });
 
