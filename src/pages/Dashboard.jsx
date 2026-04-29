@@ -196,7 +196,7 @@ export default function Dashboard() {
                           <div className="flex-1 min-w-0">
                             <Link
                               to={`/c/${course.share_token}`}
-                              className="font-serif text-[16px] font-medium text-[#1A1614] truncate mb-2 block hover:text-[#C4553F] transition-colors no-underline"
+                              className="font-serif text-[16px] font-medium text-[#1A1614] truncate mb-2 block hover:text-[#C4553F] hover:underline transition-colors no-underline"
                             >
                               {course.title || course.topic}
                             </Link>
