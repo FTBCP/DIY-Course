@@ -160,6 +160,11 @@ export default function CoursePlayer() {
       });
   }, [activeLessonIdx, lessons]);
 
+  // ── Scroll to top on navigation ──────────────────────────────────
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeLessonIdx]);
+
   // ── Write last_viewed_at whenever the active lesson changes ───────
   useEffect(() => {
     if (!userId || lessons.length === 0) return;

@@ -91,7 +91,7 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
                 `}
               >
                 <span className="mt-0.5 shrink-0">
-                  {l.state === "complete" && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
+                  {l.state === "complete" && !isCurrent && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
                   {isCurrent && l.state !== "complete" && <Circle size={16} color="#C4553F" strokeWidth={2.5} fill="#C4553F" />}
                   {isCurrent && l.state === "complete" && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
                   {l.state === "upcoming" && !isCurrent && !l.backgroundGenerating && <Circle size={16} color="#5C4A3A" strokeWidth={1.5} />}
