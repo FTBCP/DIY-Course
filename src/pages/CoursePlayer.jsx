@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import CourseSidebar from "../components/CourseSidebar";
 import LessonContent from "../components/LessonContent";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Menu } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function CoursePlayer() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
@@ -357,6 +358,7 @@ export default function CoursePlayer() {
                 citations={activeLesson.citations}
                 isComplete={completedLessonIds.has(activeLesson.id)}
                 onMarkComplete={handleMarkComplete}
+                onDone={() => navigate('/')}
                 goPrev={activeLessonIdx > 0 ? goPrev : null}
                 goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
                 inputTokens={activeLesson.input_tokens || 0}

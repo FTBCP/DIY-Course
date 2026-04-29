@@ -6,7 +6,7 @@ const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
 const SONNET_IN = 3 / 1_000_000;
 const SONNET_OUT = 15 / 1_000_000;
 
-export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations, isComplete, onMarkComplete, goPrev, goNext, inputTokens = 0, outputTokens = 0 }) {
+export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations, isComplete, onMarkComplete, onDone, goPrev, goNext, inputTokens = 0, outputTokens = 0 }) {
   citations = citations || [];
   // Rough estimate of read time (200 words per minute)
   const wordCount = body ? body.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0;
@@ -109,19 +109,17 @@ export default function LessonContent({ moduleName, lessonNum, lessonTitle, body
           </button>
         ) : (
           <button
-            onClick={isComplete ? undefined : async () => { await onMarkComplete?.(); }}
-            disabled={isComplete}
-            className={`border-[1.5px] py-3.5 px-5 rounded font-sans text-sm font-medium flex items-center gap-2 transition-all ${
-              isComplete
-                ? "bg-transparent border-[#E0D5C0] text-[#8B6F4E] cursor-default"
-                : "bg-[#1A1614] text-[#F5F1E8] border-[#1A1614] cursor-pointer hover:bg-[#C4553F] hover:border-[#C4553F]"
-            }`}
+            onClick={async () => {
+              if (!isComplete) await onMarkComplete?.();
+              onDone?.();
+            }}
+            className="bg-[#1A1614] text-[#F5F1E8] border-[1.5px] border-[#1A1614] py-3.5 px-5 rounded font-sans text-sm font-medium flex items-center gap-2 cursor-pointer hover:bg-[#C4553F] hover:border-[#C4553F] transition-all"
           >
             <span className="text-right">
-              <span className="font-serif italic text-[11px] block mb-0.5 font-normal" style={{ color: isComplete ? "#8B6F4E" : "#E0A090" }}>
+              <span className="font-serif italic text-[11px] block mb-0.5 font-normal text-[#E0A090]">
                 {isComplete ? "Course complete" : "Mark complete"}
               </span>
-              {isComplete ? "✓ Done" : "Finish"}
+              {isComplete ? "✓ Back to dashboard" : "Finish course"}
             </span>
           </button>
         )}
