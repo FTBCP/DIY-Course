@@ -38,40 +38,40 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    // Check subscription and enforce course limits
-    const { data: subscription } = await adminClient
-      .from('subscriptions')
-      .select('status, current_period_start, current_period_end')
-      .eq('user_id', user.id)
-      .single();
-
-    const isSubscribed = subscription?.status === 'active' &&
-      subscription.current_period_end &&
-      new Date(subscription.current_period_end) > new Date();
-
-    if (isSubscribed) {
-      // Paid users: 10 courses per billing period
-      const { count } = await adminClient
-        .from('courses')
-        .select('id', { count: 'exact', head: true })
+    // Enforce course limits only when payments are enabled (set PAYMENTS_ENABLED=true in secrets)
+    if (Deno.env.get('PAYMENTS_ENABLED') === 'true') {
+      const { data: subscription } = await adminClient
+        .from('subscriptions')
+        .select('status, current_period_start, current_period_end')
         .eq('user_id', user.id)
-        .eq('status', 'ready')
-        .gte('created_at', subscription.current_period_start);
+        .single();
 
-      if ((count ?? 0) >= 10) {
-        const resetDate = new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-        throw new Error(`MONTHLY_LIMIT_REACHED|Your 10-course limit resets on ${resetDate}.`);
-      }
-    } else {
-      // Free users: 1 course total
-      const { count } = await adminClient
-        .from('courses')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'ready');
+      const isSubscribed = subscription?.status === 'active' &&
+        subscription.current_period_end &&
+        new Date(subscription.current_period_end) > new Date();
 
-      if ((count ?? 0) >= 1) {
-        throw new Error("FREE_LIMIT_REACHED");
+      if (isSubscribed) {
+        const { count } = await adminClient
+          .from('courses')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'ready')
+          .gte('created_at', subscription.current_period_start);
+
+        if ((count ?? 0) >= 10) {
+          const resetDate = new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+          throw new Error(`MONTHLY_LIMIT_REACHED|Your 10-course limit resets on ${resetDate}.`);
+        }
+      } else {
+        const { count } = await adminClient
+          .from('courses')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'ready');
+
+        if ((count ?? 0) >= 1) {
+          throw new Error("FREE_LIMIT_REACHED");
+        }
       }
     }
 
