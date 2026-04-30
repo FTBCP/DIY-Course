@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Clock, PlayCircle, BookOpen, ExternalLink, ChevronLeft, ChevronRight, Check } from 'lucide-react';
@@ -101,8 +102,55 @@ export default function PublicCourse() {
   const wordCount = activeLesson?.body ? activeLesson.body.split(/\s+/).length : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
 
+  const pageUrl = `https://diycourses.app/c/${shareToken}`;
+  const metaDescription = outcomes.length > 0
+    ? `Learn ${course.topic} with this free, research-backed course. ${outcomes.slice(0, 2).join('. ')}.`
+    : `A free, research-backed course on ${course.topic} — ${lessons.length} lessons with cited sources and curated videos.`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    "name": course.title,
+    "description": metaDescription,
+    "url": pageUrl,
+    "provider": {
+      "@type": "Organization",
+      "name": "DIY Courses",
+      "url": "https://diycourses.app"
+    },
+    "isAccessibleForFree": true,
+    "educationalLevel": "Beginner to Advanced",
+    "hasCourseInstance": {
+      "@type": "CourseInstance",
+      "courseMode": "online",
+      "courseWorkload": `PT${totalReadMins}M`
+    },
+    ...(outcomes.length > 0 && { "teaches": outcomes }),
+    "numberOfCredits": lessons.length,
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F1E8]">
+      <Helmet>
+        <title>{course.title} | DIY Courses</title>
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={`${course.title} | DIY Courses`} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:site_name" content="DIY Courses" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={`${course.title} | DIY Courses`} />
+        <meta name="twitter:description" content={metaDescription} />
+
+        {/* JSON-LD structured data */}
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
 
       {/* Header */}
       <header className="bg-[#1A1614] px-6 py-4 flex items-center justify-between">
