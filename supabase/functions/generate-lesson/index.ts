@@ -34,8 +34,10 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let lesson_id: string | null = null;
+
   try {
-    const { lesson_id } = await req.json();
+    ({ lesson_id } = await req.json());
 
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -226,6 +228,7 @@ serve(async (req) => {
         video_url: videoUrl,
         input_tokens: lessonInputTokens,
         output_tokens: lessonOutputTokens,
+        generation_failed: false,
       })
       .eq('id', lesson_id);
 
@@ -258,6 +261,19 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("generate-lesson error:", errorMessage);
+
+    if (lesson_id) {
+      try {
+        const adminClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        );
+        await adminClient.from('lessons').update({ generation_failed: true }).eq('id', lesson_id);
+      } catch (e) {
+        console.error("Failed to mark lesson as failed:", e);
+      }
+    }
+
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

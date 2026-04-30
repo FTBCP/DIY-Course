@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, X } from "lucide-react";
+import { CheckCircle2, Circle, X, AlertCircle } from "lucide-react";
 
 const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
 
@@ -91,11 +91,12 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
                 `}
               >
                 <span className="mt-0.5 shrink-0">
-                  {l.state === "complete" && !isCurrent && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
+                  {l.failed && !isCurrent && <AlertCircle size={16} color="#C4553F" strokeWidth={2} />}
+                  {l.state === "complete" && !isCurrent && !l.failed && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
                   {isCurrent && l.state !== "complete" && <Circle size={16} color="#C4553F" strokeWidth={2.5} fill="#C4553F" />}
                   {isCurrent && l.state === "complete" && <CheckCircle2 size={16} color="#5C7A3A" strokeWidth={2} />}
-                  {l.state === "upcoming" && !isCurrent && !l.backgroundGenerating && <Circle size={16} color="#5C4A3A" strokeWidth={1.5} />}
-                  {l.state === "upcoming" && !isCurrent && l.backgroundGenerating && (
+                  {l.state === "upcoming" && !isCurrent && !l.backgroundGenerating && !l.failed && <Circle size={16} color="#5C4A3A" strokeWidth={1.5} />}
+                  {l.state === "upcoming" && !isCurrent && l.backgroundGenerating && !l.failed && (
                     <span className="w-4 h-4 rounded-full border-2 border-[#3A2E28] border-t-[#8B6F4E] animate-spin inline-block" />
                   )}
                 </span>
@@ -106,6 +107,9 @@ export default function CourseSidebar({ courseTitle, progress, total, lessons, a
                     </span>
                     {l.t}
                   </span>
+                  {l.failed && !isCurrent && (
+                    <span className="text-[10px] text-[#C4553F] font-sans">Failed — click to retry</span>
+                  )}
                   {SHOW_COST && hasActualCost && (
                     <span className="font-mono text-[10px] text-[#5C4A3A]">
                       ${lessonCost(l.inputTokens, l.outputTokens).toFixed(4)}

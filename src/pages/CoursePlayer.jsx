@@ -18,16 +18,21 @@ export default function CoursePlayer() {
   const [lessonError, setLessonError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [backgroundGeneratingIds, setBackgroundGeneratingIds] = useState(new Set());
+  const [failedLessonIds, setFailedLessonIds] = useState(new Set());
 
   const generatingRef = useRef(new Set());
   const lessonsRef = useRef([]);
+  const failedLessonIdsRef = useRef(new Set());
 
-  // Keep lessonsRef current so callbacks always read fresh lesson state
+  // Keep refs current so callbacks always read fresh state
   lessonsRef.current = lessons;
+  failedLessonIdsRef.current = failedLessonIds;
 
-  // ── Background generator — reads from lessonsRef, chains until all lessons are done ──
+  // ── Background generator — skips failed lessons, chains until all done ──
   const generateNextInBackground = useCallback(() => {
-    const next = lessonsRef.current.find(l => l.body === null && !generatingRef.current.has(l.id));
+    const next = lessonsRef.current.find(
+      l => l.body === null && !generatingRef.current.has(l.id) && !failedLessonIdsRef.current.has(l.id)
+    );
     if (!next) return;
 
     const lessonId = next.id;
@@ -47,11 +52,49 @@ export default function CoursePlayer() {
           if (data.course_input_tokens !== undefined) {
             setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
           }
+        } else {
+          setFailedLessonIds(prev => new Set([...prev, lessonId]));
         }
-        // Continue to the next lesson whether this one succeeded or failed
         setTimeout(generateNextInBackground, 500);
       });
   }, []);
+
+  // ── On-demand generator — used for the active lesson and "Try again" ──
+  const generateActiveLesson = useCallback((lessonId) => {
+    if (generatingRef.current.has(lessonId)) return;
+    generatingRef.current.add(lessonId);
+    setIsGeneratingLesson(true);
+    setLessonError(null);
+    setFailedLessonIds(prev => { const s = new Set(prev); s.delete(lessonId); return s; });
+
+    const timeoutId = setTimeout(() => {
+      setIsGeneratingLesson(false);
+      setLessonError("This lesson is taking too long to generate. Please try again.");
+      generatingRef.current.delete(lessonId);
+      setFailedLessonIds(prev => new Set([...prev, lessonId]));
+    }, 90000);
+
+    supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
+      .then(({ data, error }) => {
+        clearTimeout(timeoutId);
+        if (error || !data?.success) {
+          setLessonError(data?.error || error?.message || "Failed to generate lesson. Please try again.");
+          generatingRef.current.delete(lessonId);
+          setFailedLessonIds(prev => new Set([...prev, lessonId]));
+        } else {
+          setLessons(prev => prev.map(l =>
+            l.id === lessonId
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
+              : l
+          ));
+          if (data.course_input_tokens !== undefined) {
+            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
+          }
+          setTimeout(generateNextInBackground, 500);
+        }
+        setIsGeneratingLesson(false);
+      });
+  }, [generateNextInBackground]);
 
   // ── Load course, lessons, and existing progress ───────────────────
   useEffect(() => {
@@ -86,6 +129,10 @@ export default function CoursePlayer() {
 
       const loadedLessons = lessonsData || [];
       setLessons(loadedLessons);
+
+      // Restore any previously failed lessons so the sidebar shows them correctly
+      const previouslyFailed = new Set(loadedLessons.filter(l => l.generation_failed).map(l => l.id));
+      if (previouslyFailed.size > 0) setFailedLessonIds(previouslyFailed);
 
       if (user && loadedLessons.length > 0) {
         const lessonIds = loadedLessons.map(l => l.id);
@@ -126,39 +173,8 @@ export default function CoursePlayer() {
     const activeLesson = lessons[activeLessonIdx];
     if (!activeLesson || activeLesson.body !== null) return;
     if (generatingRef.current.has(activeLesson.id)) return;
-
-    const lessonId = activeLesson.id;
-    generatingRef.current.add(lessonId);
-    setIsGeneratingLesson(true);
-    setLessonError(null);
-
-    const timeoutId = setTimeout(() => {
-      setIsGeneratingLesson(false);
-      setLessonError("This lesson is taking too long to generate. Please try again.");
-      generatingRef.current.delete(lessonId);
-    }, 90000);
-
-    supabase.functions.invoke('generate-lesson', { body: { lesson_id: lessonId } })
-      .then(({ data, error }) => {
-        clearTimeout(timeoutId);
-        if (error || !data?.success) {
-          console.error('Lesson generation failed:', error || data?.error);
-          setLessonError(data?.error || error?.message || "Failed to generate lesson. Please try again.");
-          generatingRef.current.delete(lessonId);
-        } else {
-          setLessons(prev => prev.map(l =>
-            l.id === lessonId
-              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
-              : l
-          ));
-          if (data.course_input_tokens !== undefined) {
-            setCourse(prev => ({ ...prev, input_tokens: data.course_input_tokens, output_tokens: data.course_output_tokens }));
-          }
-          // Kick off background generation of remaining lessons
-          setTimeout(generateNextInBackground, 500);
-        }
-        setIsGeneratingLesson(false);
-      });
+    if (failedLessonIds.has(activeLesson.id)) return;
+    generateActiveLesson(activeLesson.id);
   }, [activeLessonIdx, lessons]);
 
   // ── Scroll to top on navigation ──────────────────────────────────
@@ -207,6 +223,11 @@ export default function CoursePlayer() {
   const goNext = () => { if (activeLessonIdx < lessons.length - 1) setActiveLessonIdx(activeLessonIdx + 1); };
 
   const handleSelectLesson = (idx) => {
+    const lesson = lessons[idx];
+    // Clear failed state when user explicitly clicks a lesson — allows retry
+    if (lesson && lesson.body === null) {
+      setFailedLessonIds(prev => { const s = new Set(prev); s.delete(lesson.id); return s; });
+    }
     setActiveLessonIdx(idx);
     setSidebarOpen(false);
   };
@@ -225,6 +246,7 @@ export default function CoursePlayer() {
       inputTokens: l.input_tokens || 0,
       outputTokens: l.output_tokens || 0,
       backgroundGenerating: backgroundGeneratingIds.has(l.id),
+      failed: failedLessonIds.has(l.id),
     }))
   }];
 
@@ -337,12 +359,7 @@ export default function CoursePlayer() {
                   {lessonError}
                 </p>
                 <button
-                  onClick={() => {
-                    generatingRef.current.delete(activeLesson.id);
-                    setLessonError(null);
-                    setIsGeneratingLesson(false);
-                    setActiveLessonIdx(idx => idx);
-                  }}
+                  onClick={() => generateActiveLesson(activeLesson.id)}
                   className="bg-[#1A1614] text-[#F5F1E8] border-none py-3 px-6 text-[14px] font-medium rounded cursor-pointer hover:bg-[#C4553F] transition-colors"
                 >
                   Try again
