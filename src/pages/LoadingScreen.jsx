@@ -58,7 +58,14 @@ export default function LoadingScreen() {
         if (error) throw error;
         
         if (data && !data.success) {
-          throw new Error(data.error || "Generation failed from backend.");
+          const raw = data.error || "Generation failed from backend.";
+          if (raw === "FREE_LIMIT_REACHED") {
+            throw new Error("You've already created your free course. Upgrade on the dashboard to create more.");
+          }
+          if (raw.startsWith("MONTHLY_LIMIT_REACHED|")) {
+            throw new Error(raw.split("|")[1]);
+          }
+          throw new Error(raw);
         }
         
         if (data && data.success && isMounted) {

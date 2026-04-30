@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('courses');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [upgradingLoading, setUpgradingLoading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -28,12 +30,26 @@ export default function Dashboard() {
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('status, current_period_start, current_period_end')
+          .eq('user_id', user.id)
+          .single();
+        setSubscription(subData);
         setActiveTab('new');
         setLoadingCourses(false);
         return;
       }
 
       setCourses(data);
+
+      // Fetch subscription status
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('status, current_period_start, current_period_end')
+        .eq('user_id', user.id)
+        .single();
+      setSubscription(subData);
 
       const courseIds = data.map(c => c.id);
 
@@ -78,6 +94,33 @@ export default function Dashboard() {
 
     fetchData();
   }, []);
+
+  const isSubscribed = subscription?.status === 'active' &&
+    subscription.current_period_end &&
+    new Date(subscription.current_period_end) > new Date();
+
+  const coursesThisPeriod = isSubscribed
+    ? courses.filter(c => new Date(c.created_at) >= new Date(subscription.current_period_start)).length
+    : 0;
+
+  const canCreate = isSubscribed ? coursesThisPeriod < 10 : courses.length < 1;
+
+  const periodResetDate = isSubscribed
+    ? new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+    : null;
+
+  const handleUpgrade = async () => {
+    setUpgradingLoading(true);
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      body: { origin: window.location.origin },
+    });
+    if (error || !data?.url) {
+      alert('Something went wrong starting checkout. Please try again.');
+      setUpgradingLoading(false);
+      return;
+    }
+    window.location.href = data.url;
+  };
 
   const handleGenerate = (e) => {
     e.preventDefault();
@@ -257,7 +300,72 @@ export default function Dashboard() {
         )}
 
         {/* ── New Course tab ── */}
-        {activeTab === 'new' && (
+        {activeTab === 'new' && !canCreate && (
+          <div>
+            {isSubscribed ? (
+              // Paid user hit monthly limit
+              <div>
+                <h1 className="font-serif text-[38px] leading-[1.1] font-medium tracking-[-0.02em] mb-4 text-[#1A1614]">
+                  You've used all 10 courses this month.
+                </h1>
+                <p className="text-[16px] text-[#5C4A3A] font-sans mb-8 leading-relaxed">
+                  Your limit resets on <strong>{periodResetDate}</strong>. In the meantime, review a course you've already built or share one with a friend.
+                </p>
+                <button
+                  onClick={() => setActiveTab('courses')}
+                  className="bg-[#1A1614] text-[#F5F1E8] border-none py-3.5 px-7 text-[14px] font-medium rounded cursor-pointer hover:bg-[#C4553F] transition-colors font-sans"
+                >
+                  View my courses →
+                </button>
+              </div>
+            ) : (
+              // Free user hit 1-course limit
+              <div>
+                <div className="text-[11px] tracking-[0.18em] uppercase text-[#8B6F4E] font-semibold mb-4 font-sans">
+                  Upgrade to continue
+                </div>
+                <h1 className="font-serif text-[38px] leading-[1.1] font-medium tracking-[-0.02em] mb-4 text-[#1A1614]">
+                  You've used your free course.
+                </h1>
+                <p className="text-[16px] text-[#5C4A3A] font-sans mb-8 max-w-[460px] leading-relaxed">
+                  Upgrade to build up to 10 courses per month on any topic — with research-backed lessons, curated videos, and cited sources.
+                </p>
+                <div className="bg-white border border-[#E0D5C0] rounded-xl p-7 mb-6 max-w-[400px]">
+                  <div className="flex items-baseline gap-1 mb-4">
+                    <span className="font-serif text-[42px] font-medium text-[#1A1614]">$9.99</span>
+                    <span className="text-[#8B6F4E] font-sans text-[14px]">/month</span>
+                  </div>
+                  <ul className="space-y-2.5 mb-6">
+                    {[
+                      '10 courses per month',
+                      'Research-backed lessons with citations',
+                      'Curated YouTube videos per lesson',
+                      'Share courses publicly',
+                      'Cancel anytime',
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-center gap-2.5 text-[14px] text-[#1A1614] font-sans">
+                        <span className="w-4 h-4 bg-[#C4553F] rounded-full flex items-center justify-center shrink-0">
+                          <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={handleUpgrade}
+                    disabled={upgradingLoading}
+                    className="w-full bg-[#C4553F] text-[#F5F1E8] border-none py-3.5 text-[15px] font-semibold rounded cursor-pointer hover:bg-[#A33D2A] transition-colors disabled:opacity-60 disabled:cursor-not-allowed font-sans"
+                  >
+                    {upgradingLoading ? 'Redirecting to checkout…' : 'Upgrade for $9.99/month →'}
+                  </button>
+                </div>
+                <p className="text-[12px] text-[#8B6F4E] font-sans">Secure payment via Stripe. Cancel anytime from your account settings.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'new' && canCreate && (
           <div>
             <h1 className="font-serif text-[48px] leading-[1.05] font-medium tracking-[-0.02em] mb-5 text-[#1A1614]">
               What would you like<br />to <em className="italic font-normal text-[#C4553F]">understand</em>?

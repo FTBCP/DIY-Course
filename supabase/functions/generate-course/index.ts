@@ -38,15 +38,42 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    // ⚠️ TEST MODE: Rate limit disabled. Re-enable before launch.
-    // const today = new Date();
-    // today.setHours(0, 0, 0, 0);
-    // const { data: recentCourses } = await supabaseClient
-    //   .from('courses').select('id').eq('user_id', user.id).eq('status', 'ready')
-    //   .gte('created_at', today.toISOString());
-    // if (recentCourses && recentCourses.length >= 1) {
-    //   throw new Error("You've already generated a course today. Come back tomorrow to generate another.");
-    // }
+    // Check subscription and enforce course limits
+    const { data: subscription } = await adminClient
+      .from('subscriptions')
+      .select('status, current_period_start, current_period_end')
+      .eq('user_id', user.id)
+      .single();
+
+    const isSubscribed = subscription?.status === 'active' &&
+      subscription.current_period_end &&
+      new Date(subscription.current_period_end) > new Date();
+
+    if (isSubscribed) {
+      // Paid users: 10 courses per billing period
+      const { count } = await adminClient
+        .from('courses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'ready')
+        .gte('created_at', subscription.current_period_start);
+
+      if ((count ?? 0) >= 10) {
+        const resetDate = new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        throw new Error(`MONTHLY_LIMIT_REACHED|Your 10-course limit resets on ${resetDate}.`);
+      }
+    } else {
+      // Free users: 1 course total
+      const { count } = await adminClient
+        .from('courses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'ready');
+
+      if ((count ?? 0) >= 1) {
+        throw new Error("FREE_LIMIT_REACHED");
+      }
+    }
 
     const anthropic = new Anthropic({
       apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
@@ -164,13 +191,16 @@ serve(async (req) => {
       errorMessage = String(error);
     }
 
-    // Clean up the incomplete course so the user can try again today
-    try {
-      if (courseId && supabaseClient) {
-        await supabaseClient.from('courses').delete().eq('id', courseId);
+    // Don't clean up for limit errors — no course was created
+    const isLimitError = errorMessage.startsWith("FREE_LIMIT_REACHED") || errorMessage.startsWith("MONTHLY_LIMIT_REACHED");
+    if (!isLimitError) {
+      try {
+        if (courseId && supabaseClient) {
+          await supabaseClient.from('courses').delete().eq('id', courseId);
+        }
+      } catch (e) {
+        console.error("Failed to cleanup course:", e);
       }
-    } catch (e) {
-      console.error("Failed to cleanup course:", e);
     }
 
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {

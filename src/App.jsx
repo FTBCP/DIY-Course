@@ -6,6 +6,7 @@ import LoadingScreen from './pages/LoadingScreen'
 import AuthWrapper from './components/AuthWrapper'
 import CoursePlayer from './pages/CoursePlayer'
 import PublicCourse from './pages/PublicCourse'
+import UpgradeSuccess from './pages/UpgradeSuccess'
 
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/c/:shareToken" element={<PublicCourse />} />
+        <Route path="/upgrade/success" element={<AuthWrapper><UpgradeSuccess /></AuthWrapper>} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route 
