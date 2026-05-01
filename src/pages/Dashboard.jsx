@@ -104,7 +104,7 @@ export default function Dashboard() {
     ? courses.filter(c => new Date(c.created_at) >= new Date(subscription.current_period_start)).length
     : 0;
 
-  const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
+  const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED !== 'false';
   const canCreate = !paymentsEnabled || (isSubscribed ? coursesThisPeriod < 10 : courses.length < 1);
 
   const periodResetDate = isSubscribed
