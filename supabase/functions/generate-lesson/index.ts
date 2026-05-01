@@ -107,9 +107,9 @@ serve(async (req) => {
 
       if (rawText) {
         // Split off quiz section first, then parse body + sources from the rest
-        const quizMarker = '\n---QUIZ---\n';
+        const quizMarker = '---QUIZ---';
         const quizIdx = rawText.indexOf(quizMarker);
-        const textWithoutQuiz = quizIdx !== -1 ? rawText.slice(0, quizIdx) : rawText;
+        const textWithoutQuiz = quizIdx !== -1 ? rawText.slice(0, quizIdx).trim() : rawText;
         const quizPart = quizIdx !== -1 ? rawText.slice(quizIdx + quizMarker.length).trim() : '';
 
         const dividerIndex = textWithoutQuiz.lastIndexOf('\n---');
