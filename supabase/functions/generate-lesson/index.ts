@@ -68,7 +68,7 @@ serve(async (req) => {
       .eq('id', lesson_id)
       .single();
 
-    if (lessonError || !lesson) throw new Error("Lesson not found");
+    if (lessonError || !lesson) throw new Error(`Lesson not found — lesson_id: ${lesson_id}, db error: ${lessonError?.message ?? 'none'}, lesson null: ${!lesson}`);
     if (lesson.courses.user_id !== user.id) throw new Error("Unauthorized");
 
     // Already generated — return existing content without re-generating
