@@ -47,7 +47,7 @@ export default function CoursePlayer() {
         if (!error && data?.success) {
           setLessons(prev => prev.map(l =>
             l.id === lessonId
-              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, quiz_questions: data.quiz_questions || [], input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
               : l
           ));
           if (data.course_input_tokens !== undefined) {
@@ -85,7 +85,7 @@ export default function CoursePlayer() {
         } else {
           setLessons(prev => prev.map(l =>
             l.id === lessonId
-              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
+              ? { ...l, body: data.body, citations: data.citations || [], video_url: data.video_url, quiz_questions: data.quiz_questions || [], input_tokens: data.lesson_input_tokens || 0, output_tokens: data.lesson_output_tokens || 0 }
               : l
           ));
           if (data.course_input_tokens !== undefined) {
@@ -217,6 +217,22 @@ export default function CoursePlayer() {
         setActiveLessonIdx(activeLessonIdx + 1);
       }
     }
+  }, [userId, lessons, activeLessonIdx]);
+
+  // ── Save quiz result to progress row ─────────────────────────────
+  const handleQuizComplete = useCallback(async ({ correct, total }) => {
+    if (!userId || lessons.length === 0) return;
+    const lesson = lessons[activeLessonIdx];
+    if (!lesson) return;
+    await supabase.from('progress').upsert(
+      {
+        user_id: userId,
+        lesson_id: lesson.id,
+        last_viewed_at: new Date().toISOString(),
+        quiz_results: { correct, total, completed_at: new Date().toISOString() },
+      },
+      { onConflict: 'user_id,lesson_id' }
+    );
   }, [userId, lessons, activeLessonIdx]);
 
   // ── Navigation ────────────────────────────────────────────────────
@@ -374,6 +390,8 @@ export default function CoursePlayer() {
                 body={activeLesson.body}
                 videoUrl={activeLesson.video_url}
                 citations={activeLesson.citations}
+                quizQuestions={activeLesson.quiz_questions || []}
+                onQuizComplete={handleQuizComplete}
                 isComplete={completedLessonIds.has(activeLesson.id)}
                 onMarkComplete={handleMarkComplete}
                 onDone={() => setShowCompletion(true)}

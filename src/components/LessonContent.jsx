@@ -1,12 +1,13 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { Clock, PlayCircle, BookOpen, ExternalLink, ChevronLeft, ChevronRight, DollarSign, CheckCircle2 } from "lucide-react";
+import QuizBlock from "./QuizBlock";
 
 const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
 const SONNET_IN = 3 / 1_000_000;
 const SONNET_OUT = 15 / 1_000_000;
 
-export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations, isComplete, onMarkComplete, onDone, goPrev, goNext, inputTokens = 0, outputTokens = 0 }) {
+export default function LessonContent({ moduleName, lessonNum, lessonTitle, body, videoUrl, citations, quizQuestions, onQuizComplete, isComplete, onMarkComplete, onDone, goPrev, goNext, inputTokens = 0, outputTokens = 0 }) {
   citations = citations || [];
   // Rough estimate of read time (200 words per minute)
   const wordCount = body ? body.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0;
@@ -57,6 +58,8 @@ export default function LessonContent({ moduleName, lessonNum, lessonTitle, body
         className="lesson-body font-serif text-[19px] leading-[1.65] text-[#2A2420] font-normal"
         dangerouslySetInnerHTML={{ __html: htmlBody }}
       />
+
+      <QuizBlock questions={quizQuestions} onComplete={onQuizComplete} />
 
       {citations.length > 0 && (
         <div className="mt-14 p-6 px-7 bg-[#FAF6EC] border-l-2 border-[#C4553F] rounded-sm">

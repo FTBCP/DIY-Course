@@ -40,6 +40,7 @@ Four logical entities. Supabase manages `users` through its built-in auth system
 | citations | jsonb | Array of `{source_title, url, quote}` |
 | video_url | text | YouTube embed URL, nullable |
 | video_metadata | jsonb | `{channel, views, published_at}`, nullable |
+| quiz_questions | jsonb | Array of `{question, options, correct, explanation}` generated with the lesson, default `[]` |
 | input_tokens | integer | Claude input tokens used to generate this lesson, default 0 |
 | output_tokens | integer | Claude output tokens used to generate this lesson, default 0 |
 | created_at | timestamptz | Auto-set |
@@ -52,6 +53,7 @@ Four logical entities. Supabase manages `users` through its built-in auth system
 | lesson_id | uuid | FK → lessons(id), cascade delete |
 | completed_at | timestamptz | Set when user marks lesson complete |
 | last_viewed_at | timestamptz | Updated every time lesson loads |
+| quiz_results | jsonb | `{correct, total, completed_at}` saved when user submits quiz |
 | | | Unique constraint on (user_id, lesson_id) |
 
 ## Relationships

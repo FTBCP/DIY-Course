@@ -16,17 +16,24 @@ The user will provide:
 
 Write the lesson as plain Markdown (400-600 words). Use ## headings, **bold text**, and bullet points. Be concrete and educational.
 
-At the very end of your response, add a divider and a Sources section listing the real URLs you found during research, like this:
+After the lesson, add a Sources section with the real URLs you found during research:
 
 ---
 **Sources:**
 - [Title of source](https://actual-url.com)
 - [Title of source](https://actual-url.com)
 
+Then add a quiz section with exactly 3 multiple-choice questions testing key concepts from the lesson:
+
+---QUIZ---
+[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":"A","explanation":"..."},{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":"B","explanation":"..."},{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":"C","explanation":"..."}]
+
 Rules:
 - Only include sources from actual web search results. Never invent a URL.
-- If a source has no URL, leave it out.
-- Write the lesson content first, then the Sources section. Nothing else.
+- Quiz: exactly 3 questions, each with exactly 4 options (A, B, C, D).
+- "correct" is the single letter of the right answer.
+- "explanation" is 1-2 sentences explaining why that answer is correct.
+- After ---QUIZ--- output the raw JSON array only — no prose, no code fences, no extra text.
 `;
 
 serve(async (req) => {
@@ -71,13 +78,14 @@ serve(async (req) => {
         body: lesson.body,
         citations: lesson.citations,
         video_url: lesson.video_url,
+        quiz_questions: lesson.quiz_questions || [],
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY'), maxRetries: 0 });
 
     // Generate lesson content with web search grounding
-    let lessonJson = { body: "Content generation failed.", citations: [] };
+    let lessonJson = { body: "Content generation failed.", citations: [], quizQuestions: [] };
     let lessonResponse;
     try {
       lessonResponse = await anthropic.messages.create({
@@ -98,10 +106,15 @@ serve(async (req) => {
         .join('') || "";
 
       if (rawText) {
-        // Split body from the Sources section
-        const dividerIndex = rawText.lastIndexOf('\n---');
-        const bodyPart = dividerIndex !== -1 ? rawText.slice(0, dividerIndex).trim() : rawText.trim();
-        const sourcesPart = dividerIndex !== -1 ? rawText.slice(dividerIndex) : '';
+        // Split off quiz section first, then parse body + sources from the rest
+        const quizMarker = '\n---QUIZ---\n';
+        const quizIdx = rawText.indexOf(quizMarker);
+        const textWithoutQuiz = quizIdx !== -1 ? rawText.slice(0, quizIdx) : rawText;
+        const quizPart = quizIdx !== -1 ? rawText.slice(quizIdx + quizMarker.length).trim() : '';
+
+        const dividerIndex = textWithoutQuiz.lastIndexOf('\n---');
+        const bodyPart = dividerIndex !== -1 ? textWithoutQuiz.slice(0, dividerIndex).trim() : textWithoutQuiz.trim();
+        const sourcesPart = dividerIndex !== -1 ? textWithoutQuiz.slice(dividerIndex) : '';
 
         // Parse markdown links from the Sources section: [Title](url)
         const citations = [];
@@ -112,7 +125,18 @@ serve(async (req) => {
           citations.push({ id: String(idx++), title: match[1], url: match[2] });
         }
 
-        lessonJson = { body: bodyPart, citations };
+        // Parse quiz questions JSON
+        let quizQuestions = [];
+        if (quizPart) {
+          try {
+            const parsed = JSON.parse(quizPart);
+            if (Array.isArray(parsed)) quizQuestions = parsed;
+          } catch (e) {
+            console.error("Failed to parse quiz JSON:", e.message);
+          }
+        }
+
+        lessonJson = { body: bodyPart, citations, quizQuestions };
       }
     } catch (e) {
       if (e.status === 429) {
@@ -226,6 +250,7 @@ serve(async (req) => {
         body: lessonJson.body,
         citations: lessonJson.citations || [],
         video_url: videoUrl,
+        quiz_questions: lessonJson.quizQuestions || [],
         input_tokens: lessonInputTokens,
         output_tokens: lessonOutputTokens,
         generation_failed: false,
@@ -252,6 +277,7 @@ serve(async (req) => {
       body: lessonJson.body,
       citations: lessonJson.citations || [],
       video_url: videoUrl,
+      quiz_questions: lessonJson.quizQuestions || [],
       lesson_input_tokens: lessonInputTokens,
       lesson_output_tokens: lessonOutputTokens,
       course_input_tokens: newInputTokens,
