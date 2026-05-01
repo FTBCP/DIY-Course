@@ -1,6 +1,6 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { Clock, PlayCircle, BookOpen, ExternalLink, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
+import { Clock, PlayCircle, BookOpen, ExternalLink, ChevronLeft, ChevronRight, DollarSign, CheckCircle2 } from "lucide-react";
 
 const SHOW_COST = import.meta.env.VITE_SHOW_TOKEN_COST === 'true';
 const SONNET_IN = 3 / 1_000_000;
@@ -25,10 +25,11 @@ export default function LessonContent({ moduleName, lessonNum, lessonTitle, body
         {lessonTitle}
       </h1>
       
-      <div className="flex gap-5 pb-7 mb-10 border-b border-[#E0D5C0] text-[13px] text-[#8B6F4E] font-sans">
+      <div className="flex gap-5 pb-7 mb-10 border-b border-[#E0D5C0] text-[13px] text-[#8B6F4E] font-sans flex-wrap">
         <div className="flex items-center gap-1.5"><Clock size={14} /> {readTime} min read</div>
         {videoUrl && <div className="flex items-center gap-1.5"><PlayCircle size={14} /> Video included</div>}
         {citations.length > 0 && <div className="flex items-center gap-1.5"><BookOpen size={14} /> {citations.length} sources</div>}
+        {isComplete && <div className="flex items-center gap-1.5 text-[#5C7A3A] font-semibold"><CheckCircle2 size={14} /> Completed</div>}
         {SHOW_COST && (inputTokens > 0 || outputTokens > 0) && (
           <div className="flex items-center gap-1.5 font-mono">
             <DollarSign size={14} />

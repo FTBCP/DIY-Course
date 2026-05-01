@@ -204,6 +204,40 @@ export default function Dashboard() {
             {loadingCourses ? (
               <p className="text-[#8B6F4E] font-serif italic">Loading your courses…</p>
             ) : (
+              <>
+              {/* Continue where you left off */}
+              {(() => {
+                const inProgress = courses.find(c => {
+                  const total = lessonCounts[c.id] || 0;
+                  const done = completedCounts[c.id] || 0;
+                  return done > 0 && done < total;
+                });
+                if (!inProgress) return null;
+                const total = lessonCounts[inProgress.id] || 0;
+                const done = completedCounts[inProgress.id] || 0;
+                return (
+                  <div className="mb-8 p-5 bg-white border border-[#E0D5C0] rounded-xl">
+                    <div className="text-[11px] tracking-[0.15em] uppercase text-[#8B6F4E] font-semibold mb-1.5 font-sans">
+                      Continue where you left off
+                    </div>
+                    <div className="font-serif text-[17px] font-medium text-[#1A1614] mb-3 truncate">
+                      {inProgress.title || inProgress.topic}
+                    </div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-1 h-[3px] bg-[#E0D5C0] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#C4553F] rounded-full" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+                      </div>
+                      <span className="text-[11px] text-[#8B6F4E] font-sans whitespace-nowrap">{done} of {total} lessons</span>
+                    </div>
+                    <Link
+                      to={`/course/${inProgress.id}`}
+                      className="inline-flex items-center gap-1.5 bg-[#1A1614] text-[#F5F1E8] py-2.5 px-5 rounded text-[13px] font-semibold font-sans no-underline hover:bg-[#C4553F] transition-colors"
+                    >
+                      Resume →
+                    </Link>
+                  </div>
+                );
+              })()}
               <ul className="list-none p-0 m-0">
                 {courses.map((course) => {
                   const total = lessonCounts[course.id] || 0;
@@ -289,6 +323,7 @@ export default function Dashboard() {
                   );
                 })}
               </ul>
+              </>
             )}
 
             <button

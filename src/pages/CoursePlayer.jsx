@@ -17,6 +17,7 @@ export default function CoursePlayer() {
   const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
   const [lessonError, setLessonError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
   const [backgroundGeneratingIds, setBackgroundGeneratingIds] = useState(new Set());
   const [failedLessonIds, setFailedLessonIds] = useState(new Set());
 
@@ -375,7 +376,7 @@ export default function CoursePlayer() {
                 citations={activeLesson.citations}
                 isComplete={completedLessonIds.has(activeLesson.id)}
                 onMarkComplete={handleMarkComplete}
-                onDone={() => navigate('/')}
+                onDone={() => setShowCompletion(true)}
                 goPrev={activeLessonIdx > 0 ? goPrev : null}
                 goNext={activeLessonIdx < lessons.length - 1 ? goNext : null}
                 inputTokens={activeLesson.input_tokens || 0}
@@ -390,6 +391,48 @@ export default function CoursePlayer() {
         </div>
 
       </div>
+
+      {/* ── Course completion overlay ── */}
+      {showCompletion && (
+        <div className="fixed inset-0 z-50 bg-[#F5F1E8] flex flex-col items-center justify-center p-8 overflow-y-auto">
+          <div className="max-w-[520px] w-full text-center">
+            <div className="w-14 h-14 bg-[#5C7A3A] rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg width="22" height="17" viewBox="0 0 22 17" fill="none">
+                <path d="M1.5 9l7 7L20.5 1" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="text-[11px] tracking-[0.18em] uppercase text-[#5C7A3A] font-semibold mb-3 font-sans">
+              Course complete
+            </div>
+            <h1 className="font-serif text-[32px] lg:text-[40px] font-medium leading-tight tracking-[-0.02em] mb-8 text-[#1A1614]">
+              {course.title}
+            </h1>
+
+            {course.outcomes && course.outcomes.length > 0 && (
+              <div className="text-left mb-10 bg-white border border-[#E0D5C0] rounded-xl p-6">
+                <div className="text-[11px] tracking-[0.15em] uppercase text-[#8B6F4E] font-semibold mb-4 font-sans">
+                  What you covered
+                </div>
+                <ul className="space-y-3 list-none p-0 m-0">
+                  {course.outcomes.map((outcome, i) => (
+                    <li key={i} className="flex items-start gap-3 text-[15px] text-[#2A2420] font-sans leading-snug">
+                      <span className="text-[#5C7A3A] font-bold mt-0.5 shrink-0">✓</span>
+                      {outcome}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <button
+              onClick={() => navigate('/')}
+              className="bg-[#1A1614] text-[#F5F1E8] border-none py-3.5 px-8 text-[15px] font-medium rounded cursor-pointer hover:bg-[#C4553F] transition-colors font-sans"
+            >
+              Back to My Courses →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
