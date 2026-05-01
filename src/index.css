@@ -66,3 +66,27 @@
   color: #5C4A3A;
   font-style: italic;
 }
+.lesson-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+.lesson-body th {
+  background: #EDE8DE;
+  color: #1A1614;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #E0D5C0;
+}
+.lesson-body td {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #E0D5C0;
+  color: #2A2420;
+  vertical-align: top;
+}
+.lesson-body tr:nth-child(even) td {
+  background: #FAF6EC;
+}

@@ -79,8 +79,8 @@ serve(async (req) => {
     if (courseError || !course) throw new Error(`Course not found — course_id: ${lesson.course_id}, db error: ${courseError?.message ?? 'none'}`);
     if (course.user_id !== user.id) throw new Error("Unauthorized");
 
-    // Already generated — return existing content without re-generating
-    if (lesson.body) {
+    // Already generated with quiz — return existing content without re-generating
+    if (lesson.body && lesson.quiz_questions && lesson.quiz_questions.length > 0) {
       return new Response(JSON.stringify({
         success: true,
         body: lesson.body,
@@ -133,20 +133,19 @@ serve(async (req) => {
           citations.push({ id: String(idx++), title: match[1], url: match[2] });
         }
 
-        // Parse quiz questions JSON
+        // Parse quiz questions JSON — extract the [...] array regardless of surrounding formatting
         let quizQuestions = [];
-        console.log("Quiz marker found:", quizIdx !== -1, "| quizPart length:", quizPart.length, "| quizPart preview:", quizPart.slice(0, 120));
         if (quizPart) {
-          try {
-            const parsed = JSON.parse(quizPart);
-            if (Array.isArray(parsed)) {
-              quizQuestions = parsed;
-              console.log("Quiz parsed successfully:", quizQuestions.length, "questions");
-            } else {
-              console.error("Quiz JSON parsed but is not an array:", typeof parsed);
+          const arrayMatch = quizPart.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            try {
+              const parsed = JSON.parse(arrayMatch[0]);
+              if (Array.isArray(parsed)) quizQuestions = parsed;
+            } catch (e) {
+              console.error("Failed to parse quiz JSON:", e.message, "| raw:", quizPart.slice(0, 200));
             }
-          } catch (e) {
-            console.error("Failed to parse quiz JSON:", e.message, "| raw:", quizPart.slice(0, 200));
+          } else {
+            console.error("No JSON array found in quiz part:", quizPart.slice(0, 200));
           }
         }
 
