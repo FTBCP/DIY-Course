@@ -384,6 +384,7 @@ export default function CoursePlayer() {
               </div>
             ) : (
               <LessonContent
+                key={activeLesson.id}
                 moduleName="Course Lessons"
                 lessonNum={activeLessonIdx + 1}
                 lessonTitle={activeLesson.title}
