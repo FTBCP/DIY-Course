@@ -127,12 +127,18 @@ serve(async (req) => {
 
         // Parse quiz questions JSON
         let quizQuestions = [];
+        console.log("Quiz marker found:", quizIdx !== -1, "| quizPart length:", quizPart.length, "| quizPart preview:", quizPart.slice(0, 120));
         if (quizPart) {
           try {
             const parsed = JSON.parse(quizPart);
-            if (Array.isArray(parsed)) quizQuestions = parsed;
+            if (Array.isArray(parsed)) {
+              quizQuestions = parsed;
+              console.log("Quiz parsed successfully:", quizQuestions.length, "questions");
+            } else {
+              console.error("Quiz JSON parsed but is not an array:", typeof parsed);
+            }
           } catch (e) {
-            console.error("Failed to parse quiz JSON:", e.message);
+            console.error("Failed to parse quiz JSON:", e.message, "| raw:", quizPart.slice(0, 200));
           }
         }
 
