@@ -61,15 +61,23 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    // Fetch lesson + parent course to verify ownership
+    // Fetch lesson, then its parent course as two separate queries (avoids PostgREST join cache issues)
     const { data: lesson, error: lessonError } = await adminClient
       .from('lessons')
-      .select('*, courses(id, title, topic, user_id)')
+      .select('*')
       .eq('id', lesson_id)
-      .single();
+      .maybeSingle();
 
     if (lessonError || !lesson) throw new Error(`Lesson not found — lesson_id: ${lesson_id}, db error: ${lessonError?.message ?? 'none'}, lesson null: ${!lesson}`);
-    if (lesson.courses.user_id !== user.id) throw new Error("Unauthorized");
+
+    const { data: course, error: courseError } = await adminClient
+      .from('courses')
+      .select('id, title, topic, user_id')
+      .eq('id', lesson.course_id)
+      .maybeSingle();
+
+    if (courseError || !course) throw new Error(`Course not found — course_id: ${lesson.course_id}, db error: ${courseError?.message ?? 'none'}`);
+    if (course.user_id !== user.id) throw new Error("Unauthorized");
 
     // Already generated — return existing content without re-generating
     if (lesson.body) {
@@ -95,7 +103,7 @@ serve(async (req) => {
         tools: [{ type: "web_search_20250305", name: "web_search" }],
         messages: [{
           role: "user",
-          content: `Course Title: ${lesson.courses.title}\nLesson Title: ${lesson.title}`,
+          content: `Course Title: ${course.title}\nLesson Title: ${lesson.title}`,
         }]
       }, { timeout: 60000 });
 
@@ -162,7 +170,7 @@ serve(async (req) => {
 
         // Step 1: search for candidates by relevance — "tutorial" biases toward educational content
         const searchRes = await get(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(lesson.title + " " + lesson.courses.topic + " tutorial")}&type=video&key=${ytKey}&maxResults=5`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(lesson.title + " " + course.topic + " tutorial")}&type=video&key=${ytKey}&maxResults=5`
         );
         const searchData = await searchRes.json();
         const candidates = searchData.items || [];
@@ -221,7 +229,7 @@ serve(async (req) => {
                 max_tokens: 10,
                 messages: [{
                   role: "user",
-                  content: `You are screening YouTube videos for an educational lesson.\n\nLesson: ${lesson.title}\nCourse: ${lesson.courses.title}\n\nCandidates:\n${videoList}\n\nWhich number is the most clearly educational and appropriate video? Reply with just the number, or "none" if none are appropriate.`,
+                  content: `You are screening YouTube videos for an educational lesson.\n\nLesson: ${lesson.title}\nCourse: ${course.title}\n\nCandidates:\n${videoList}\n\nWhich number is the most clearly educational and appropriate video? Reply with just the number, or "none" if none are appropriate.`,
                 }],
               }, { timeout: 10000 });
 
@@ -267,8 +275,8 @@ serve(async (req) => {
     const { data: courseTokens } = await adminClient
       .from('courses')
       .select('input_tokens, output_tokens')
-      .eq('id', lesson.courses.id)
-      .single();
+      .eq('id', course.id)
+      .maybeSingle();
 
     const newInputTokens = (courseTokens?.input_tokens || 0) + lessonInputTokens;
     const newOutputTokens = (courseTokens?.output_tokens || 0) + lessonOutputTokens;
@@ -276,7 +284,7 @@ serve(async (req) => {
     await adminClient
       .from('courses')
       .update({ input_tokens: newInputTokens, output_tokens: newOutputTokens })
-      .eq('id', lesson.courses.id);
+      .eq('id', course.id);
 
     return new Response(JSON.stringify({
       success: true,
