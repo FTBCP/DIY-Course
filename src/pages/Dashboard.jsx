@@ -105,7 +105,7 @@ export default function Dashboard() {
     : 0;
 
   const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED !== 'false';
-  const canCreate = !paymentsEnabled || (isSubscribed ? coursesThisPeriod < 10 : courses.length < 1);
+  const canCreate = !paymentsEnabled || (isSubscribed ? coursesThisPeriod < 10 : courses.length < 999);
 
   const periodResetDate = isSubscribed
     ? new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
