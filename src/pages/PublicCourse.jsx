@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 
 export default function PublicCourse() {
   const { shareToken } = useParams();
+  const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
@@ -66,6 +67,10 @@ export default function PublicCourse() {
   }, [shareToken]);
 
   const handleStartReading = () => {
+    if (isOwner) {
+      navigate(`/course/${course.id}`);
+      return;
+    }
     setShowReader(true);
     setTimeout(() => readerRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
   };

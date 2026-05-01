@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('courses');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [dismissedContinue, setDismissedContinue] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [upgradingLoading, setUpgradingLoading] = useState(false);
 
@@ -206,7 +207,7 @@ export default function Dashboard() {
             ) : (
               <>
               {/* Continue where you left off */}
-              {(() => {
+              {!dismissedContinue && (() => {
                 const inProgress = courses.find(c => {
                   const total = lessonCounts[c.id] || 0;
                   const done = completedCounts[c.id] || 0;
@@ -216,11 +217,18 @@ export default function Dashboard() {
                 const total = lessonCounts[inProgress.id] || 0;
                 const done = completedCounts[inProgress.id] || 0;
                 return (
-                  <div className="mb-8 p-5 bg-white border border-[#E0D5C0] rounded-xl">
+                  <div className="mb-8 p-5 bg-white border border-[#E0D5C0] rounded-xl relative">
+                    <button
+                      onClick={() => setDismissedContinue(true)}
+                      className="absolute top-3 right-3 text-[#C0AD98] hover:text-[#1A1614] transition-colors p-1"
+                      aria-label="Dismiss"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    </button>
                     <div className="text-[11px] tracking-[0.15em] uppercase text-[#8B6F4E] font-semibold mb-1.5 font-sans">
                       Continue where you left off
                     </div>
-                    <div className="font-serif text-[17px] font-medium text-[#1A1614] mb-3 truncate">
+                    <div className="font-serif text-[17px] font-medium text-[#1A1614] mb-3 truncate pr-6">
                       {inProgress.title || inProgress.topic}
                     </div>
                     <div className="flex items-center gap-3 mb-4">
